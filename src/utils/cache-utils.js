@@ -1,78 +1,82 @@
 // src/utils/cache-utils.js
 /**
  * In-memory cache utility with TTL (time to live) for API responses.
- * This utility helps reduce the number of API calls and improve performance.
+ * This utility helps reduce the number of API requests by caching frequently accessed data.
  */
 
 const cache = {};
 
 /**
- * Set a value in the cache with a TTL.
+ * Set a value in the cache with a TTL (time to live) in milliseconds.
  * @param {string} key - The cache key.
  * @param {any} value - The value to cache.
  * @param {number} ttl - The time to live in milliseconds.
  */
-const setCache = (key, value, ttl) => {
-  const currentTime = new Date().getTime();
-  cache[key] = { value, expiresAt: currentTime + ttl };
-};
+function setCache(key, value, ttl) {
+  const now = Date.now();
+  cache[key] = { value, expires: now + ttl };
+}
 
 /**
  * Get a value from the cache.
  * @param {string} key - The cache key.
  * @returns {any} The cached value or null if not found or expired.
  */
-const getCache = (key) => {
-  if (!cache[key]) return null;
-  const currentTime = new Date().getTime();
-  if (cache[key].expiresAt < currentTime) {
-    delete cache[key];
-    return null;
+function getCache(key) {
+  const now = Date.now();
+  if (cache[key] && cache[key].expires > now) {
+    return cache[key].value;
   }
-  return cache[key].value;
-};
+  return null;
+}
 
 /**
- * Clear the cache.
- */
-const clearCache = () => {
-  cache = {};
-};
-
-/**
- * Check if a key exists in the cache.
+ * Remove a value from the cache.
  * @param {string} key - The cache key.
- * @returns {boolean} True if the key exists in the cache, false otherwise.
  */
-const hasCache = (key) => {
-  return Object.keys(cache).includes(key);
-};
+function removeCache(key) {
+  delete cache[key];
+}
+
+/**
+ * Clear the entire cache.
+ */
+function clearCache() {
+  cache = {};
+}
 
 // Example usage:
-// Set a value in the cache with a TTL of 1 minute
+// Set a value in the cache with a TTL of 1 minute (60000 ms)
 // setCache('apiResponse', { data: 'example data' }, 60000);
 
 // Get a value from the cache
 // const cachedValue = getCache('apiResponse');
 
-// Clear the cache
+// Remove a value from the cache
+// removeCache('apiResponse');
+
+// Clear the entire cache
 // clearCache();
 
-// Check if a key exists in the cache
-// const hasKey = hasCache('apiResponse');
-
 // Export the cache utility functions
-export { setCache, getCache, clearCache, hasCache };
+export { setCache, getCache, removeCache, clearCache };
 
 // Integrate with existing files
 // For example, in src/features/model-editing/model-editing.js
-// import { setCache, getCache } from '../utils/cache-utils';
+import { setCache, getCache } from '../utils/cache-utils';
 
-// const fetchModelData = async () => {
-//   const cachedData = getCache('modelData');
-//   if (cachedData) return cachedData;
-//   const response = await fetch('/api/model-data');
-//   const data = await response.json();
-//   setCache('modelData', data, 30000); // Cache for 30 seconds
-//   return data;
-// };
+// Cache API responses for 1 minute (60000 ms)
+const cacheTtl = 60000;
+
+// Set cache for model editing API response
+setCache('modelEditingResponse', modelEditingResponse, cacheTtl);
+
+// Get cached model editing API response
+const cachedModelEditingResponse = getCache('modelEditingResponse');
+
+// Use the cached response if available
+if (cachedModelEditingResponse) {
+  // Use the cached response
+} else {
+  // Make a new API request and cache the response
+}
