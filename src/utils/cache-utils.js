@@ -1,82 +1,100 @@
-// src/utils/cache-utils.js
 /**
- * In-memory cache utility with TTL (time to live) for API responses.
- * This utility helps reduce the number of API requests by caching frequently accessed data.
+ * Cache utility module for storing and retrieving API responses with a time-to-live (TTL).
+ * @module cache-utils
  */
 
-const cache = {};
+const cache = new Map();
 
 /**
- * Set a value in the cache with a TTL (time to live) in milliseconds.
+ * Set a value in the cache with a TTL.
  * @param {string} key - The cache key.
  * @param {any} value - The value to cache.
- * @param {number} ttl - The time to live in milliseconds.
+ * @param {number} ttl - The time-to-live in milliseconds.
  */
 function setCache(key, value, ttl) {
-  const now = Date.now();
-  cache[key] = { value, expires: now + ttl };
+  const timeout = setTimeout(() => {
+    cache.delete(key);
+  }, ttl);
+  cache.set(key, { value, timeout });
 }
 
 /**
  * Get a value from the cache.
  * @param {string} key - The cache key.
- * @returns {any} The cached value or null if not found or expired.
+ * @returns {any} The cached value, or undefined if not found.
  */
 function getCache(key) {
-  const now = Date.now();
-  if (cache[key] && cache[key].expires > now) {
-    return cache[key].value;
+  const cached = cache.get(key);
+  if (cached) {
+    return cached.value;
   }
-  return null;
+  return undefined;
 }
 
 /**
- * Remove a value from the cache.
- * @param {string} key - The cache key.
- */
-function removeCache(key) {
-  delete cache[key];
-}
-
-/**
- * Clear the entire cache.
+ * Clear the cache.
  */
 function clearCache() {
-  cache = {};
+  cache.forEach((cached, key) => {
+    clearTimeout(cached.timeout);
+    cache.delete(key);
+  });
+}
+
+/**
+ * Check if a key is in the cache.
+ * @param {string} key - The cache key.
+ * @returns {boolean} True if the key is in the cache, false otherwise.
+ */
+function hasCache(key) {
+  return cache.has(key);
+}
+
+/**
+ * Get the cache size.
+ * @returns {number} The number of items in the cache.
+ */
+function getCacheSize() {
+  return cache.size;
 }
 
 // Example usage:
-// Set a value in the cache with a TTL of 1 minute (60000 ms)
-// setCache('apiResponse', { data: 'example data' }, 60000);
+// Set a value in the cache with a 1-minute TTL
+// setCache('api-response', { data: 'example' }, 60000);
 
 // Get a value from the cache
-// const cachedValue = getCache('apiResponse');
+// const cachedValue = getCache('api-response');
 
-// Remove a value from the cache
-// removeCache('apiResponse');
-
-// Clear the entire cache
+// Clear the cache
 // clearCache();
 
+// Check if a key is in the cache
+// const hasKey = hasCache('api-response');
+
+// Get the cache size
+// const cacheSize = getCacheSize();
+
 // Export the cache utility functions
-export { setCache, getCache, removeCache, clearCache };
+export { setCache, getCache, clearCache, hasCache, getCacheSize };
 
 // Integrate with existing files
-// For example, in src/features/model-editing/model-editing.js
-import { setCache, getCache } from '../utils/cache-utils';
+// In src/features/model-editing/model-editing.js:
+// import { setCache, getCache } from '../utils/cache-utils';
+// ...
+// setCache('model-editing-response', response, 30000);
+// const cachedResponse = getCache('model-editing-response');
 
-// Cache API responses for 1 minute (60000 ms)
-const cacheTtl = 60000;
+// In src/features/model-library/model-library.js:
+// import { clearCache } from '../utils/cache-utils';
+// ...
+// clearCache();
 
-// Set cache for model editing API response
-setCache('modelEditingResponse', modelEditingResponse, cacheTtl);
+// In src/features/furniture-library/furniture-library.js:
+// import { hasCache } from '../utils/cache-utils';
+// ...
+// const hasFurnitureCache = hasCache('furniture-library-response');
 
-// Get cached model editing API response
-const cachedModelEditingResponse = getCache('modelEditingResponse');
-
-// Use the cached response if available
-if (cachedModelEditingResponse) {
-  // Use the cached response
-} else {
-  // Make a new API request and cache the response
-}
+// In src/features/model-upload/model-upload.js:
+// import { getCacheSize } from '../utils/cache-utils';
+// ...
+// const cacheSize = getCacheSize();
