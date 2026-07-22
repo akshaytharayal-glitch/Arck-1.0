@@ -1,100 +1,79 @@
+// src/utils/cache-utils.js
 /**
- * Cache utility module for storing and retrieving API responses with a time-to-live (TTL).
- * @module cache-utils
+ * In-memory cache utility with TTL (time to live) for API responses.
+ * This utility helps reduce the number of API calls by caching frequently accessed data.
  */
 
-const cache = new Map();
+const cache = {};
 
 /**
- * Set a value in the cache with a TTL.
+ * Set a value in the cache with a TTL (time to live) in milliseconds.
  * @param {string} key - The cache key.
  * @param {any} value - The value to cache.
- * @param {number} ttl - The time-to-live in milliseconds.
+ * @param {number} ttl - The time to live in milliseconds.
  */
 function setCache(key, value, ttl) {
-  const timeout = setTimeout(() => {
-    cache.delete(key);
-  }, ttl);
-  cache.set(key, { value, timeout });
+  const now = Date.now();
+  cache[key] = { value, expires: now + ttl };
 }
 
 /**
  * Get a value from the cache.
  * @param {string} key - The cache key.
- * @returns {any} The cached value, or undefined if not found.
+ * @returns {any} The cached value or null if not found or expired.
  */
 function getCache(key) {
-  const cached = cache.get(key);
-  if (cached) {
-    return cached.value;
+  const now = Date.now();
+  if (cache[key] && cache[key].expires > now) {
+    return cache[key].value;
   }
-  return undefined;
+  return null;
 }
 
 /**
  * Clear the cache.
  */
 function clearCache() {
-  cache.forEach((cached, key) => {
-    clearTimeout(cached.timeout);
-    cache.delete(key);
-  });
+  cache = {};
 }
 
 /**
- * Check if a key is in the cache.
+ * Check if a key exists in the cache.
  * @param {string} key - The cache key.
- * @returns {boolean} True if the key is in the cache, false otherwise.
+ * @returns {boolean} True if the key exists in the cache, false otherwise.
  */
 function hasCache(key) {
-  return cache.has(key);
+  return cache[key] !== undefined;
 }
 
 /**
- * Get the cache size.
- * @returns {number} The number of items in the cache.
+ * Get the TTL (time to live) of a cached value.
+ * @param {string} key - The cache key.
+ * @returns {number} The TTL in milliseconds or -1 if not found.
  */
-function getCacheSize() {
-  return cache.size;
+function getTTL(key) {
+  if (cache[key]) {
+    return cache[key].expires - Date.now();
+  }
+  return -1;
 }
 
 // Example usage:
-// Set a value in the cache with a 1-minute TTL
-// setCache('api-response', { data: 'example' }, 60000);
+// Set a value in the cache with a TTL of 1 minute (60000 milliseconds)
+setCache('apiResponse', { data: 'example data' }, 60000);
 
-// Get a value from the cache
-// const cachedValue = getCache('api-response');
+// Get the cached value
+const cachedValue = getCache('apiResponse');
+console.log(cachedValue); // Output: { data: 'example data' }
 
 // Clear the cache
-// clearCache();
+clearCache();
 
-// Check if a key is in the cache
-// const hasKey = hasCache('api-response');
+// Check if a key exists in the cache
+console.log(hasCache('apiResponse')); // Output: false
 
-// Get the cache size
-// const cacheSize = getCacheSize();
+// Get the TTL of a cached value
+console.log(getTTL('apiResponse')); // Output: -1
 
 // Export the cache utility functions
-export { setCache, getCache, clearCache, hasCache, getCacheSize };
-
-// Integrate with existing files
-// In src/features/model-editing/model-editing.js:
-// import { setCache, getCache } from '../utils/cache-utils';
-// ...
-// setCache('model-editing-response', response, 30000);
-// const cachedResponse = getCache('model-editing-response');
-
-// In src/features/model-library/model-library.js:
-// import { clearCache } from '../utils/cache-utils';
-// ...
-// clearCache();
-
-// In src/features/furniture-library/furniture-library.js:
-// import { hasCache } from '../utils/cache-utils';
-// ...
-// const hasFurnitureCache = hasCache('furniture-library-response');
-
-// In src/features/model-upload/model-upload.js:
-// import { getCacheSize } from '../utils/cache-utils';
-// ...
-// const cacheSize = getCacheSize();
+export { setCache, getCache, clearCache, hasCache, getTTL };
