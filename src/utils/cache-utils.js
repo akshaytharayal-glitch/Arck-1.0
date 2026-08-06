@@ -1,79 +1,92 @@
-// src/utils/cache-utils.js
 /**
- * In-memory cache utility with TTL (time to live) for API responses.
- * This utility helps reduce the number of API calls by caching frequently accessed data.
+ * Cache utility module for storing and retrieving API responses with a time-to-live (TTL)
+ * @module cache-utils
  */
 
-const cache = {};
+const cache = new Map();
 
 /**
- * Set a value in the cache with a TTL (time to live) in milliseconds.
- * @param {string} key - The cache key.
- * @param {any} value - The value to cache.
- * @param {number} ttl - The time to live in milliseconds.
+ * Set a value in the cache with a TTL
+ * @param {string} key - The cache key
+ * @param {any} value - The value to store
+ * @param {number} ttl - The time-to-live in milliseconds
  */
 function setCache(key, value, ttl) {
-  const now = Date.now();
-  cache[key] = { value, expires: now + ttl };
+  const expiration = Date.now() + ttl;
+  cache.set(key, { value, expiration });
 }
 
 /**
- * Get a value from the cache.
- * @param {string} key - The cache key.
- * @returns {any} The cached value or null if not found or expired.
+ * Get a value from the cache
+ * @param {string} key - The cache key
+ * @returns {any} The cached value or undefined if not found or expired
  */
 function getCache(key) {
-  const now = Date.now();
-  if (cache[key] && cache[key].expires > now) {
-    return cache[key].value;
+  const cached = cache.get(key);
+  if (!cached) return undefined;
+  if (cached.expiration < Date.now()) {
+    cache.delete(key);
+    return undefined;
   }
-  return null;
+  return cached.value;
 }
 
 /**
- * Clear the cache.
+ * Clear the cache
  */
 function clearCache() {
-  cache = {};
+  cache.clear();
 }
 
 /**
- * Check if a key exists in the cache.
- * @param {string} key - The cache key.
- * @returns {boolean} True if the key exists in the cache, false otherwise.
+ * Check if a key is in the cache
+ * @param {string} key - The cache key
+ * @returns {boolean} True if the key is in the cache, false otherwise
  */
 function hasCache(key) {
-  return cache[key] !== undefined;
+  return cache.has(key);
 }
 
 /**
- * Get the TTL (time to live) of a cached value.
- * @param {string} key - The cache key.
- * @returns {number} The TTL in milliseconds or -1 if not found.
+ * Get the expiration time of a cached value
+ * @param {string} key - The cache key
+ * @returns {number} The expiration time in milliseconds or -1 if not found
  */
-function getTTL(key) {
-  if (cache[key]) {
-    return cache[key].expires - Date.now();
-  }
-  return -1;
+function getCacheExpiration(key) {
+  const cached = cache.get(key);
+  if (!cached) return -1;
+  return cached.expiration;
 }
 
 // Example usage:
-// Set a value in the cache with a TTL of 1 minute (60000 milliseconds)
-setCache('apiResponse', { data: 'example data' }, 60000);
+// Set a value in the cache with a 1 minute TTL
+// setCache('apiResponse', { data: 'example' }, 60000);
 
 // Get the cached value
-const cachedValue = getCache('apiResponse');
-console.log(cachedValue); // Output: { data: 'example data' }
+// const cachedValue = getCache('apiResponse');
 
 // Clear the cache
-clearCache();
+// clearCache();
 
-// Check if a key exists in the cache
-console.log(hasCache('apiResponse')); // Output: false
+// Check if a key is in the cache
+// const hasKey = hasCache('apiResponse');
 
-// Get the TTL of a cached value
-console.log(getTTL('apiResponse')); // Output: -1
+// Get the expiration time of a cached value
+// const expiration = getCacheExpiration('apiResponse');
 
 // Export the cache utility functions
-export { setCache, getCache, clearCache, hasCache, getTTL };
+export { setCache, getCache, clearCache, hasCache, getCacheExpiration };
+
+// Integrate with existing files
+// In src/features/model-editing/model-editing.js
+import { setCache, getCache } from '../utils/cache-utils';
+
+// Use the cache to store and retrieve API responses
+// setCache('modelData', modelData, 30000);
+// const cachedModelData = getCache('modelData');
+
+// In src/features/model-library/model-library.js
+import { clearCache } from '../utils/cache-utils';
+
+// Clear the cache when the user logs out
+// clearCache();
