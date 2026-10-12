@@ -8,7 +8,7 @@
 A comprehensive web application for architects, designers, and real estate professionals to create, visualize, and share 3D models of buildings and spaces, with a wide range of features and tools for collaboration and presentation.
 
 ## Features
-* 3D model upload and rendering
+* 3D model upload and rendering!
 * Model editing and manipulation
 * Furniture and object library
 * Texture and material editor
