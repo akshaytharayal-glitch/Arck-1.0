@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>Studio — ARCK</title>
+<meta name="description" content="Design in 3D: draw walls and rooms, place arches, domes, columns, roofs and furniture, measure, section, study the sun and export.">
+<meta name="theme-color" content="#0b0905"><link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="assets/img/favicon-32.png"><link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="stylesheet" href="css/theme.css"><link rel="stylesheet" href="css/studio.css">
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
+</head>
+<body class="studio">
+<header class="s-top">
+  <a class="brand" href="index.html" aria-label="ARCK home"><img src="assets/img/logo-small.png" alt="" width="46" height="34"><span class="brand-t">ARCK</span></a>
+  <input id="projName" class="proj-name" value="Untitled project" aria-label="Project name" maxlength="60" spellcheck="false">
+  <div class="s-grp"><button class="btn ghost icon" id="btnUndo" title="Undo (Ctrl+Z)" aria-label="Undo" disabled></button><button class="btn ghost icon" id="btnRedo" title="Redo (Ctrl+Y)" aria-label="Redo" disabled></button></div>
+  <span class="spacer"></span>
+  <button class="btn ghost sm" id="btnFile" aria-haspopup="menu">File</button>
+  <button class="btn ghost sm" id="btnExport" aria-haspopup="menu">Export</button>
+  <button class="btn ghost icon" id="btnHelp" title="Help & shortcuts (?)" aria-label="Help"></button>
+  <button class="btn ghost icon" id="btnPages" title="Site menu" aria-label="Site menu" aria-haspopup="menu"></button>
+  <button class="btn ghost icon desk-only" id="btnPanel" title="Show / hide side panel" aria-label="Toggle panel"></button>
+</header>
+
+<div class="s-body">
+  <nav class="s-rail" id="rail" aria-label="Tools"></nav>
+  <section class="s-main">
+    <div class="s-opts" id="opts" role="toolbar" aria-label="Tool options"></div>
+    <div class="s-vp" id="vp">
+      <div class="s-views" id="views"></div>
+      <div class="s-hud" id="hud"></div>
+      <div class="s-selbar" id="selbar" hidden></div>
+      <div class="s-empty" id="empty" hidden><img src="assets/img/logo.png" alt="" width="120"><h2>Start your design</h2><p>Pick something from the <b>Library</b>, draw a <b>room</b>, load a <b>template</b> or import your own model.</p><div class="row" style="justify-content:center"><button class="btn" data-act="tpl">Templates</button><button class="btn ghost" data-act="room">Draw a room</button><button class="btn ghost" data-act="import">Import file</button></div></div>
+      <div class="s-dropmsg" id="dropmsg">Drop 3D files to import</div>
+    </div>
+  </section>
+  <aside class="s-panel" id="panel" aria-label="Side panel">
+    <button class="sheet-handle" id="sheetHandle" aria-label="Resize panel"><span></span></button>
+    <div class="s-tabs" id="tabs" role="tablist"></div>
+    <div class="s-tabbody" id="tabbody"></div>
+  </aside>
+</div>
+<nav class="s-bottom" id="bottom" aria-label="Panels"></nav>
+
+<div class="menu" id="menu" role="menu" hidden></div>
+<div class="modal-back" id="dlg" role="dialog" aria-modal="true"><div class="dlg" id="dlgBody"></div></div>
+<input type="file" id="fileModel" multiple hidden>
+<input type="file" id="fileProject" accept=".json,.arck,application/json" hidden>
+<script type="module" src="js/studio/main.js"></script>
+</body>
+</html>

@@ -1,57 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Architectural Visualizer</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            overflow: hidden;
-            background: #1a1a2e;
-        }
-        
-        #canvas-container {
-            width: 100vw;
-            height: 100vh;
-        }
-        
-        #ui {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        
-        h1 {
-            margin: 0 0 10px 0;
-            font-size: 24px;
-            color: #333;
-        }
-        
-        p {
-            color: #666;
-            margin: 5px 0;
-        }
-    </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ARCK — 3D architecture studio</title><meta name="description" content="A free 3D architecture studio in your browser: parametric shapes, structures and building components, drawing tools, a file viewer, calculators and lessons.">
+<meta name="theme-color" content="#0b0905"><link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="assets/img/favicon-32.png"><link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="stylesheet" href="css/theme.css"><link rel="stylesheet" href="css/pages.css"><link rel="stylesheet" href="css/site.css">
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
-    <div id="canvas-container"></div>
-    <div id="ui">
-        <h1>🏗️ Architectural Visualizer</h1>
-        <p>Drag to rotate • Scroll to zoom</p>
-        <p>3D Building Visualization</p>
-    </div>
-    
-    <script type="module" src="src/app.js"></script>
+<header class="hero"><div class="wrap">
+ <div><span class="eyebrow">Free · No install · Works on phone &amp; desktop</span>
+ <h1>Design in <span class="gold-text">3D</span>,<br>right in your browser.</h1>
+ <p class="lead">ARCK is a golden-touch architecture studio for students and makers: 140+ parametric shapes, structures and building components, real drawing tools, sun studies, quantities — and a viewer for your own 3D files.</p>
+ <div class="cta"><a class="btn" href="studio.html">Open the Studio</a><a class="btn ghost" href="viewer.html">View my 3D file</a><a class="btn ghost" href="guide.html">How it works</a></div>
+ <div class="stats"><div><b id="nItems">150</b><span>parametric items</span></div><div><b>10</b><span>file formats in</span></div><div><b>7</b><span>starter templates</span></div><div><b>12</b><span>calculators</span></div></div></div>
+ <div class="hero-3d"><div class="vp" id="hero"></div><img class="hero-logo" src="assets/img/logo-small.png" alt=""></div>
+</div></header>
+<main class="wrap">
+<section class="section tight"><span class="eyebrow">Explore</span><h2>Everything in its own page</h2>
+<div class="grid feat" style="margin-top:18px" id="feat"></div></section>
+<section class="section tight"><span class="eyebrow">From the catalog</span><h2>A taste of the library</h2><div class="showcase" id="show"></div></section>
+<section class="section tight"><span class="eyebrow">How it works</span><h2>Three steps</h2>
+<div class="grid feat how" style="margin-top:18px"><div class="card"><div class="ico">1</div><h3>Pick</h3><p class="small">Browse shapes, structures and components, or start from a template. Every item has sliders and a how-to note.</p></div><div class="card"><div class="ico">2</div><h3>Build</h3><p class="small">Draw walls to exact lengths, place, array and mirror, cut sections, study the sun, measure.</p></div><div class="card"><div class="ico">3</div><h3>Share</h3><p class="small">Export GLB, OBJ, STL or PLY, a PNG picture, a CSV schedule — or save the project and reopen it anywhere.</p></div></div></section>
+<section class="cta-band"><h2>Start building</h2><p style="margin:8px auto 18px;max-width:52ch">Your work is auto-saved in your browser and files never leave your device.</p><a class="btn" href="studio.html?template=house">Open the house template</a></section>
+</main>
+<noscript><p style="padding:2rem">ARCK needs JavaScript and WebGL to show 3D models.</p></noscript>
+<script type="module" src="js/pages/home.js"></script>
 </body>
 </html>

@@ -1,0 +1,12 @@
+{
+  "name": "arck",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ARCK — 3D architecture studio for the web (static site, no build step)",
+  "type": "module",
+  "scripts": {
+    "serve": "python3 -m http.server 8731",
+    "test": "node --import ./tests/register.mjs --test tests/catalog.test.mjs tests/scene.test.mjs tests/templates.test.mjs"
+  },
+  "license": "MIT"
+}

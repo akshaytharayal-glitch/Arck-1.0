@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Learn — ARCK</title><meta name="description" content="Architecture lessons, classical orders, glossary, quizzes and building challenges for students.">
+<meta name="theme-color" content="#0b0905"><link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="assets/img/favicon-32.png"><link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="stylesheet" href="css/theme.css"><link rel="stylesheet" href="css/pages.css"><link rel="stylesheet" href="css/site.css">
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
+</head>
+<body>
+<main id="app" class="wrap">
+<div class="page-head"><span class="eyebrow">For students</span><h1>Learn <span class="gold-text">Architecture</span></h1>
+<p>Short lessons, a glossary, a classical-orders comparison in 3D, quizzes and building challenges — each one links to a model you can open and change.</p></div>
+<div class="toc"><a class="chip" href="#lessons">Lessons</a><a class="chip" href="#orders">Classical orders</a><a class="chip" href="#glossary">Glossary</a><a class="chip" href="#quiz">Quiz</a><a class="chip" href="#challenges">Challenges</a></div>
+<section class="lesson" id="lessons"><h2>Lessons</h2><div class="cols" id="lessonList"></div></section>
+<section class="lesson" id="orders"><h2>The classical orders</h2><p style="margin-top:8px">Five column systems from ancient Greece and Rome. Compare their proportions and click one to explore it.</p><div class="orders" id="orderList"></div></section>
+<section class="lesson" id="glossary"><h2>Glossary</h2><div class="toolbar"><div class="search"><input id="gq" type="search" placeholder="Search terms…"></div></div><div class="gloss" id="gl"></div></section>
+<section class="lesson" id="quiz"><h2>Quick quiz</h2><p id="qscore" style="margin-top:6px"></p><div id="qs"></div><button class="btn" id="qnew" style="margin-top:14px">New questions</button></section>
+<section class="lesson" id="challenges"><h2>Challenges</h2><p style="margin-top:6px">Build these in the Studio. Tick them off — progress is saved on this device.</p><div class="prog"><i id="cprog" style="width:0"></i></div><div id="chal"></div></section>
+</main><noscript><p style="padding:2rem">ARCK needs JavaScript and WebGL to show 3D models.</p></noscript>
+<script type="module" src="js/pages/learn.js"></script>
+</body>
+</html>
