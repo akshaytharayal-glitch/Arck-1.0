@@ -1,44 +1,56 @@
-# 3D Architectural Visualizer Platform
-[![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=FFFFFF)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=FFFFFF)](https://www.mongodb.com/)
-[![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=FFFFFF)](https://nodejs.org/)
+<p align="center"><img src="assets/img/logo.png" alt="ARCK" width="180"></p>
 
-## Description
-A comprehensive web application for architects, designers, and real estate professionals to create, visualize, and share 3D models of buildings and spaces, with a wide range of features and tools for collaboration and presentation.
+# ARCK — 3D architecture studio for the web
 
-## Features
-* 3D model upload and rendering
-* Model editing and manipulation
-* Furniture and object library
-* Texture and material editor
-* Lighting and atmosphere controls
-* Collaboration and real-time commenting
-* Presentation mode with slideshow and video export
-* User profiles and project management
-* Search and filtering for models and projects
-* Rating and review system
+A free, no-install 3D architecture studio for students, designers and makers. It runs entirely in the browser (desktop and mobile), has a golden theme built around the ARCK torii "G" logo, and keeps every file on your own device.
 
-## Installation
-To get started with the project, follow these steps:
-1. Clone the repository using `git clone https://github.com/your-repo/3d-architectural-visualizer-platform.git`
-2. Install the dependencies using `npm install` or `yarn install`
-3. Start the development server using `npm run dev` or `yarn dev`
+## What's inside
 
-## Usage
-To use the platform, simply navigate to `http://localhost:3000` in your web browser. You can then create an account, upload your 3D models, and start exploring the various features and tools.
+| Page | What it does |
+|---|---|
+| `index.html` | Landing page with a live 3D hero |
+| `studio.html` | Full editor: walls (typed lengths), rooms, slabs, move/rotate/scale gizmo, grid & angle snap, arrays, mirror, group, align, layers, section cut, sun & shadow study, measure, notes, lights, quantities & cost, undo/redo, auto-save, 7 templates |
+| `shapes.html` · `structures.html` · `components.html` | ~150 parametric items (solids, polyhedra, arches, domes, vaults, trusses, bridges, towers, walls, doors, windows, classical columns, roofs, stairs, furniture, landscape…) with live sliders, materials, section view, scale figure, instructions and GLB/OBJ/STL download |
+| `viewer.html` | Open your own GLB, glTF, OBJ(+MTL), STL, PLY, FBX, DAE, 3MF, 3DS or SVG; render modes, section, measure, unit fixes, parts list, export, "Open in Studio" |
+| `tools.html` | 12 calculators: stairs, roof pitch, ramp, arch geometry, area & volume, concrete, bricks, paint, beam check, sun angle, units, cost |
+| `learn.html` | Lessons, classical orders in 3D, glossary, quiz, challenges |
+| `guide.html` | Instructions for every tool, shortcuts, formats, mobile gestures, FAQ |
 
-## Folder Structure
-The project is organized into the following folders:
-* `src/`: Source code for the application
-* `src/components/`: Reusable React components
-* `src/pages/`: Page-level components
-* `src/lib/`: Utility libraries and functions
-* `docs/`: Documentation for the project
-* `tests/`: Unit tests and integration tests
+The Studio has two layouts: a three-column desktop layout (tool rail · viewport · panel) and, below 900 px, a touch layout with a bottom navigation sheet, tool strip and floating selection bar.
 
-## Contributing
-We welcome contributions to the project. To get started, please fork the repository and submit a pull request with your changes. Make sure to include a detailed description of your changes and any relevant tests or documentation.
+## Run it
+
+There is no build step. Serve the folder with any static server:
+
+```bash
+npm run serve        # or: python3 -m http.server 8731
+# open http://localhost:8731
+```
+
+Opening `index.html` directly from disk will not work because browsers block ES modules on `file://`.
+
+### Deploy
+
+Push to GitHub and enable **Settings ▸ Pages ▸ Deploy from branch ▸ main / root**. Any static host (Netlify, Cloudflare Pages, S3) works too.
+
+## Tech
+
+- Plain ES modules with an import map; [three.js](https://threejs.org) r186 is vendored in `vendor/three/` (no CDN, works offline once loaded).
+- `js/catalog/` – parametric builders (1 unit = 1 m); `js/engine/` – viewport, materials, importers/exporters; `js/studio/` – editor scene, tools and UI; `js/pages/` – page scripts.
+- Service worker + web manifest make it installable and usable offline.
+- Auto-save and hand-off use IndexedDB; learning progress uses localStorage.
+
+## Tests
+
+```bash
+npm test                         # catalog (all items/params build), scene operations, templates
+python3 tests/e2e_studio.py      # Studio end-to-end in headless Chromium (needs playwright + a running server)
+```
+
+## Notes
+
+Quantities, costs and structural checks are learning estimates, not engineering advice. The previous Next.js/MongoDB prototype is archived in `legacy-src/` and `legacy-tests/` for reference only.
 
 ## License
-This project is licensed under the [MIT License](https://opensource.org/licenses/MIT). By contributing to the project, you agree to release your contributions under the same license.
+
+MIT

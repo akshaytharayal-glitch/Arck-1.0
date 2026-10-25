@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Guide — ARCK</title><meta name="description" content="Instructions for every ARCK page and tool: Studio, library, walls, section, sun, files, mobile gestures and shortcuts.">
+<meta name="theme-color" content="#0b0905"><link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="assets/img/favicon-32.png"><link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="stylesheet" href="css/theme.css"><link rel="stylesheet" href="css/pages.css"><link rel="stylesheet" href="css/site.css">
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
+</head>
+<body>
+<main id="app" class="wrap">
+<div class="page-head"><span class="eyebrow">Instructions</span><h1>How to use <span class="gold-text">ARCK</span></h1>
+<p>Every page and tool explained — on desktop and on a phone. Press <kbd>?</kbd> in the Studio for a shortcut cheat-sheet.</p></div>
+<div class="guide-layout"><nav class="guide-nav" id="gnav">
+<a href="#start">Quick start</a><a href="#library">Library</a><a href="#drawing">Walls, rooms &amp; slabs</a><a href="#transform">Move · rotate · scale</a><a href="#edit">Editing &amp; materials</a><a href="#scene">Scene &amp; layers</a><a href="#view">View, section &amp; sun</a><a href="#measure">Measuring &amp; notes</a><a href="#plan">Plan &amp; quantities</a><a href="#files">Files &amp; formats</a><a href="#mobile">On a phone</a><a href="#shortcuts">Shortcuts</a><a href="#catalog">Catalog pages</a><a href="#viewer">Viewer</a><a href="#tools">Calculators</a><a href="#faq">FAQ</a></nav>
+<div>
+<section class="guide-sec" id="start"><h2>Quick start</h2>
+<ol><li>Open the <a href="studio.html">Studio</a>. Pick a <b>template</b> (House, Shrine, Temple, Cloister, Rotunda, Bridge or Hall) from File ▸ Start from a template, or start empty.</li>
+<li>Open the <b>Library</b> tab, search or browse, and click an item to add it at the centre of the view. Tick <b>Click-to-place mode</b> to stamp copies by clicking.</li>
+<li>Select an object and use the gizmo to move it, or open <b>Edit</b> to type exact values and change its parameters and material.</li>
+<li>Your work is <b>auto-saved</b> in this browser. Use File ▸ Save to keep a <code>.arck.json</code> file you can reopen anywhere.</li></ol>
+<p>1 unit = 1 metre. Everything sits on the ground plane (y = 0).</p></section>
+
+<section class="guide-sec" id="library"><h2>Library</h2><p>The Library holds the same parametric catalog as the <a href="shapes.html">Shapes</a>, <a href="structures.html">Structures</a> and <a href="components.html">Components</a> pages — about 150 items. Use the search box or the category chips. Click a card to add the item at the centre of the view, or tick <b>Click-to-place mode</b> to stamp repeated copies by clicking in the scene (<kbd>R</kbd> rotates 90°, <kbd>Esc</kbd> stops). On desktop you can also drag a card onto the canvas.</p>
+<p>Open any item's page for a live 3D preview, parameter sliders, materials, section view, a human-scale figure and downloads, plus a short "how to use it" note.</p></section>
+
+<section class="guide-sec" id="drawing"><h2>Walls, rooms &amp; slabs</h2>
+<h3>Wall <kbd>W</kbd></h3><ol><li>Click to set the start, click again for each corner. The length label follows the cursor.</li><li>Type a number (metres) then <kbd>Enter</kbd> to place a point exactly that far in the cursor's direction.</li><li><kbd>Enter</kbd>, <b>Finish</b> or double-clicking the last point ends the run; <b>Close</b> joins back to the start; <b>Undo point</b> removes the last segment; <kbd>Esc</kbd> cancels.</li></ol>
+<p>The options bar sets wall height, thickness, material and level, plus grid snap and <b>Ortho</b> (locks to 90°). Walls snap to the grid and to existing wall ends (green marker).</p>
+<h3>Room <kbd>Q</kbd></h3><p>Click two opposite corners: you get four walls, a floor slab, a door and windows. Edit each wall afterwards in the Edit tab.</p>
+<h3>Slab <kbd>F</kbd></h3><p>Click the outline of any polygon floor or roof deck; click near the first point or press <kbd>Enter</kbd> to close it.</p></section>
+
+<section class="guide-sec" id="transform"><h2>Move · rotate · scale</h2>
+<p><kbd>V</kbd> select, <kbd>T</kbd> move, <kbd>R</kbd> rotate, <kbd>S</kbd> scale. Drag the coloured arrows or rings of the gizmo. Hold <kbd>Shift</kbd> and click to multi-select (on a phone toggle <b>Multi-select</b> in the options bar), or drag nothing and press <kbd>Ctrl</kbd>+<kbd>A</kbd> for everything. Arrow keys nudge by the snap step; <kbd>Shift</kbd> nudges 4×; <kbd>PageUp/PageDown</kbd> lifts and lowers.</p>
+<p>Multiple objects share a pivot. <b>Align</b>, <b>Distribute</b>, <b>Mirror</b>, <b>Array</b> (linear or around a point), <b>Group</b> and <b>To ground</b> are in the Edit tab.</p></section>
+
+<section class="guide-sec" id="edit"><h2>Editing &amp; materials</h2>
+<p>The <b>Edit</b> tab shows the selected object's name, exact position / rotation / scale (type values and press <kbd>Tab</kbd>), the item's <b>parameters</b> (the same sliders as on the catalog page) and a <b>material picker</b> — stone, brick, timber, marble, gold, glass, concrete, plaster and more. Changes can be undone with <kbd>Ctrl</kbd>+<kbd>Z</kbd>. Lock an object (padlock in the Scene tab) to stop accidental moves.</p></section>
+
+<section class="guide-sec" id="scene"><h2>Scene &amp; layers</h2><p>The <b>Scene</b> tab is an outliner: click to select, the eye hides and the padlock locks objects; objects belong to layers (assign an object's layer in the Edit tab). Hide a layer to declutter the view.</p></section>
+
+<section class="guide-sec" id="view"><h2>View, section &amp; sun</h2>
+<ul><li><b>Camera views</b>: <kbd>1</kbd> iso, <kbd>2</kbd> top, <kbd>3</kbd> front, <kbd>4</kbd> right, <kbd>5</kbd> back, <kbd>6</kbd> left, <kbd>Home</kbd> fit all, <kbd>.</kbd> frame selection, <kbd>O</kbd> perspective/orthographic.</li>
+<li><b>Render modes</b>: Solid, Clay (form study), Wire, X-ray.</li>
+<li><b>Section cut</b>: turn on, pick X / Y / Z, slide the plane and flip it to see inside buildings — then take a picture.</li>
+<li><b>Sun &amp; shadow study</b>: set latitude, longitude, date and hour; the sun and shadows follow real solar positions. Try 21 June vs 21 December.</li>
+<li><b>Themes</b>: dark, light and sky backgrounds. <b>Picture</b> saves a PNG at 1× or 2×.</li></ul></section>
+
+<section class="guide-sec" id="measure"><h2>Measuring &amp; notes</h2><p><kbd>M</kbd> Measure: click two points — they snap to corners and vertices — to leave a dimension line. <kbd>N</kbd> adds a text note anchored in 3D. <kbd>L</kbd> adds a light you can move; spot lights make good "theatre" renders.</p></section>
+
+<section class="guide-sec" id="plan"><h2>Plan &amp; quantities</h2><p>The <b>Plan</b> tab lists every material in the scene with volume and area, plus a cost estimate using editable rates, and exports a <b>CSV</b> schedule for a spreadsheet. Costs are learning estimates, not quotations.</p></section>
+
+<section class="guide-sec" id="files"><h2>Files &amp; formats</h2>
+<table><tr><th>Format</th><th>Import</th><th>Export</th><th>Notes</th></tr>
+<tr><td>GLB / glTF</td><td>✔</td><td>✔</td><td>Best: keeps materials and textures</td></tr><tr><td>OBJ (+MTL)</td><td>✔</td><td>✔</td><td>Select .obj, .mtl and textures together</td></tr><tr><td>STL</td><td>✔</td><td>✔</td><td>3D printing; no colour</td></tr><tr><td>PLY</td><td>✔</td><td>✔</td><td>Scans and vertex colours</td></tr>
+<tr><td>FBX · DAE · 3MF · 3DS</td><td>✔</td><td>–</td><td>Re-export to GLB to keep as a project</td></tr><tr><td>SVG</td><td>✔</td><td>–</td><td>Extruded into a 3D plan</td></tr><tr><td>.arck.json</td><td>✔</td><td>✔</td><td>Full project incl. imported models</td></tr><tr><td>PNG · CSV</td><td>–</td><td>✔</td><td>Pictures and schedules</td></tr></table>
+<p>Drag files straight onto the Studio or <a href="viewer.html">Viewer</a>. If a model arrives huge or tiny, the unit hint offers a ×0.001 / ×0.01 / ×100 fix. Nothing is uploaded — files are processed on your device.</p></section>
+
+<section class="guide-sec" id="mobile"><h2>On a phone or tablet</h2>
+<p>Below 900 px wide the Studio switches to a touch layout: the viewport fills the screen, a <b>bottom bar</b> opens Library / Edit / Scene / View / Plan as a sheet you can drag up, a <b>tool strip</b> sits above it, and a floating bar under the selection offers Move, Rotate, Scale, Copy, Edit and Delete.</p>
+<ul><li>One finger: orbit · Two fingers: pan and zoom · Tap: select · Tap empty space: deselect</li><li>Walls: tap points; type lengths in the field in the options bar.</li><li>Use landscape on tablets for the desktop-style side panel (≥ 900 px).</li></ul>
+<p>Add the site to your home screen for a full-screen app that works offline once loaded.</p></section>
+
+<section class="guide-sec" id="shortcuts"><h2>Keyboard shortcuts</h2>
+<table><tr><th>Key</th><th>Action</th><th>Key</th><th>Action</th></tr>
+<tr><td><kbd>V</kbd> <kbd>T</kbd> <kbd>R</kbd> <kbd>S</kbd></td><td>Select · Move · Rotate · Scale</td><td><kbd>W</kbd> <kbd>Q</kbd> <kbd>F</kbd></td><td>Wall · Room · Slab</td></tr>
+<tr><td><kbd>M</kbd> <kbd>N</kbd> <kbd>L</kbd></td><td>Measure · Note · Light</td><td><kbd>G</kbd></td><td>Grid snap on/off</td></tr>
+<tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd></td><td>Undo / Redo</td><td><kbd>Ctrl</kbd>+<kbd>D</kbd></td><td>Duplicate</td></tr>
+<tr><td><kbd>Ctrl</kbd>+<kbd>A</kbd></td><td>Select all</td><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Save project</td></tr>
+<tr><td><kbd>Ctrl</kbd>+<kbd>I</kbd></td><td>Import model</td><td><kbd>Del</kbd></td><td>Delete</td></tr>
+<tr><td><kbd>1</kbd>–<kbd>6</kbd></td><td>Camera views</td><td><kbd>Home</kbd> <kbd>.</kbd> <kbd>O</kbd></td><td>Fit · Frame · Ortho</td></tr>
+<tr><td><kbd>Esc</kbd></td><td>Cancel / deselect</td><td><kbd>?</kbd></td><td>Help</td></tr></table></section>
+
+<section class="guide-sec" id="catalog"><h2>Catalog pages</h2><p><a href="shapes.html">Shapes</a> (solids, polyhedra, curved forms, plan shapes), <a href="structures.html">Structures</a> (arches, domes, vaults, trusses, bridges, towers, monuments, frames, footings) and <a href="components.html">Components</a> (walls, doors, windows, columns, roofs, stairs, furniture, fixtures, landscape). Click a tile for the detail view: orbit it, change sliders, swap materials, cut a section, switch to wireframe, show a human-scale figure and download <b>GLB / OBJ / STL</b> — or <b>Add to Studio</b>. Links like <code>components.html#column-doric</code> open an item directly.</p></section>
+
+<section class="guide-sec" id="viewer"><h2>Viewer</h2><p>Drop any supported file on the <a href="viewer.html">Viewer</a>. You get render modes, a section cut, a two-click measure, scale fixes for unit mix-ups, a parts list with visibility toggles, picture and format export, and <b>Open in Studio</b> to keep building around it.</p></section>
+
+<section class="guide-sec" id="tools"><h2>Calculators</h2><p><a href="tools.html">Tools</a> has stairs (Blondel's rule), roof pitch, ramps, segmental arch geometry, area &amp; volume, concrete, bricks, paint, a simple beam check, sun angle, unit converter and a rough cost estimate. Many have a 3D preview and an Open in Studio button. Results are for learning and early design, not for construction.</p></section>
+
+<section class="guide-sec" id="faq"><h2>FAQ</h2>
+<details class="fold"><summary>Is my work uploaded anywhere?</summary><div>No. ARCK is a static site. Auto-save uses your browser's IndexedDB; everything else stays in files you save.</div></details><br>
+<details class="fold"><summary>My model is invisible or tiny</summary><div>It is probably in millimetres or centimetres. Use the unit hint in the Studio Edit tab or Viewer's Scale buttons, then press <kbd>Home</kbd> to fit.</div></details><br>
+<details class="fold"><summary>Textures are missing on my OBJ</summary><div>Select the .obj, the .mtl and the image files together when importing. Browsers cannot read neighbouring files by themselves.</div></details><br>
+<details class="fold"><summary>It feels slow on my phone</summary><div>Switch to Clay or Wire mode, turn shadows off in the View tab, and avoid importing meshes above ~500 k triangles.</div></details><br>
+<details class="fold"><summary>Can I get my project into Blender, SketchUp or Revit?</summary><div>Export GLB (or OBJ) from File ▸ Export. Blender opens GLB directly; SketchUp and Revit usually need an import plugin or an OBJ/FBX bridge.</div></details></section>
+</div></div></main><noscript><p style="padding:2rem">ARCK needs JavaScript and WebGL to show 3D models.</p></noscript>
+<script type="module" src="js/pages/guide.js"></script>
+</body>
+</html>
