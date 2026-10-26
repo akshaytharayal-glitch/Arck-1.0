@@ -11,13 +11,14 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { exportModel, downloadDataURL, download } from '../engine/exporter.js';
 import { toast, registerSW } from '../ui/chrome.js';
 import { kvGet, kvSet, kvDel } from './store.js';
+import { initExtras } from './extras.js';
 
 const $ = s => document.querySelector(s);
-const vp = new Viewport($('#vp'), { grid: 60, preserve: false });
+const vp = new Viewport($('#vp'), { grid: 60, preserve: false, edges: true, ao: !matchMedia('(pointer: coarse)').matches }); vp.setTheme('sky');
 vp.canvas.style.position = 'absolute'; vp.canvas.style.inset = '0';
 const sc = new StudioScene(vp);
 const ctx = { vp, sc, hooks: {}, multi: false };
-const tools = new Tools(vp, sc, ctx.hooks); ctx.tools = tools;
+ctx.hooks.toast = toast; const tools = new Tools(vp, sc, ctx.hooks); ctx.tools = tools;
 sc.commit('start');
 vp.setView('iso', new THREE.Box3(new THREE.Vector3(-8, 0, -8), new THREE.Vector3(8, 4, 8))); vp.fitShadow(30);
 
@@ -36,11 +37,13 @@ ctx.addItem = (id, { stamp = false, at = null } = {}) => {
 ctx.view = name => { if (name === 'fit') { vp.setView('iso'); vp.frame(null, 'iso'); } else if (name === 'iso') { vp.setView('iso'); vp.refit(vp.world); } else { vp.setView(name); vp.refit(vp.world, 1.05); } };
 ctx.importFiles = async files => {
   try {
-    toast('Reading ' + files.length + ' file' + (files.length > 1 ? 's' : '') + '…', 6000);
-    const r = await importFiles(files); const c = viewCentre(); const e = sc.addImport(r.object, r.name, { pos: sc.list.length ? [c.x, 0, c.z] : [0, 0, 0] });
-    tools.refreshSelection(); vp.refit(e, 1.4); toast(`${r.name}: ${r.stats.tris.toLocaleString()} triangles, ${r.stats.meshes} meshes${r.warnings.length ? ' — ' + r.warnings[0] : ''}`, 5200);
-    if (r.hint) { ctx.showTab?.('edit'); }
-  } catch (err) { console.error(err); toast('Import failed: ' + err.message, 6000); }
+    toast('Reading ' + files.length + ' file' + (files.length > 1 ? 's' : '') + '…', 8000);
+    const r = await importFiles(files, { onProgress: m => toast(m, 8000) }); const c = viewCentre(); const e = sc.addImport(r.object, r.name, { pos: sc.list.length ? [c.x, 0, c.z] : [0, 0, 0] });
+    tools.refreshSelection(); vp.refit(e, 1.4);
+    toast(`${r.name}: ${r.stats.tris.toLocaleString()} triangles · ${r.stats.size.map(v => v.toFixed(1)).join(' × ')} m${r.stats.clay ? ' · no colours in file' : ''}`, 5200);
+    const note = [r.hint?.text, ...r.warnings].filter(Boolean); if (note.length) setTimeout(() => toast(note[0], 7000), 2600);
+    ctx.showTab?.('edit');
+  } catch (err) { console.error(err); toast('Import failed: ' + err.message, 7000); }
 };
 ctx.loadTemplate = id => {
   const t = TEMPLATES.find(x => x.id === id); if (!t) return; sc.newProject(); t.run(sc); sc.name = t.name; $('#projName').value = t.name; sc.commit('Template: ' + t.name); tools.setTool('select'); sc.clearSel(); vp.frame(null, 'iso'); vp.refit(vp.world, 1.1); ctx.updateHud(); sheetClose(); toast(t.name + ' loaded');
@@ -65,6 +68,9 @@ ctx.action = async a => {
     case 'group': if (s.length > 1) sc.group(s); else toast('Select two or more objects to group'); return;
     case 'ungroup': sc.ungroup(s[0]); return;
     case 'frame': return frameSelection();
+    case 'isolate': return ctx.isolate();
+    case 'walk': return ctx.walk();
+    case 'sheet': return ctx.exportSheet();
     case 'all': sc.selectAll(); return;
     case 'tpl': ctx.openTemplates(); return;
     case 'import': $('#fileModel').click(); return;
@@ -81,6 +87,7 @@ ctx.action = async a => {
   if (a.startsWith('al-')) { sc.align(s, a.slice(3)); return; }
   if (a.startsWith('dist-')) { sc.distribute(s, a.slice(5)); return; }
 };
+initExtras(ctx);
 const ui = initUI(ctx); ctx.showTab = ui.showTab;
 
 $('#fileProject').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { const p = JSON.parse(await f.text()); await sc.fromProject(p); $('#projName').value = sc.name; tools.refreshSelection(); vp.frame(null, 'iso'); vp.refit(vp.world, 1.1); toast('Opened ' + sc.name); } catch (err) { toast('Could not open: ' + err.message, 5000); } });

@@ -146,3 +146,9 @@ body.panel-hidden .s-panel{display:none}
 @media (min-width:900px) and (max-width:1200px){.s-body{grid-template-columns:60px minmax(0,1fr) 330px}}
 .dlg-back{position:fixed}
 #dlg.open{display:flex}
+
+/* walkthrough HUD */
+.walk-hud{position:absolute;left:50%;transform:translateX(-50%);top:12px;z-index:6;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;background:rgba(11,9,5,.82);border:1px solid var(--line-2);border-radius:14px;padding:8px 14px;font-size:.82rem;color:var(--muted);max-width:calc(100% - 24px)}
+.walk-hud b{color:var(--gold-hi)} .walk-hud[hidden]{display:none}
+body.walking .s-selbar,body.walking .vp-views{display:none}
+.mini{background:none;border:0;color:var(--faint);cursor:pointer;padding:4px}.mini:hover{color:var(--bad)}

@@ -18,6 +18,14 @@ A free, no-install 3D architecture studio for students, designers and makers. It
 
 The Studio has two layouts: a three-column desktop layout (tool rail · viewport · panel) and, below 900 px, a touch layout with a bottom navigation sheet, tool strip and floating selection bar.
 
+## Studio features (v2)
+
+- **Importing that keeps your model right**: drop a `.zip` (OBJ + MTL + textures), or select the OBJ, MTL and image files together. Colours, textures and transparency are kept. Unit (mm/cm/m/in/ft), up-axis (Y or Z) and real size are auto-detected and can be fixed live in the Edit tab (type the real width, pick unit/up, yaw, flip).
+- **Zoom that always works**: wheel/pinch zooms toward the cursor at any model size; clipping and fog adapt to scene scale; the gizmo no longer blocks the view.
+- **Realistic look**: sky lighting, soft shadows, ambient occlusion, edge outlines, textured brick/roof/plaster/stone, leaf-card trees. Clay, Drawing, Wire and X-ray display modes.
+- **Studio tools**: area tool, camera bookmarks with fly-to and tour, walkthrough (WASD / touch), isolate, section cut, sun study, quantities, and an A3 drawing-sheet export with scale bar, north arrow and title block.
+- Regenerate the home-page gallery with `python3 tests/render_showcase.py [url] [template ids]`.
+
 ## Run it
 
 There is no build step. Serve the folder with any static server:

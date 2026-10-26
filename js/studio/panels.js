@@ -9,6 +9,7 @@ import { MATERIALS } from '../engine/materials.js';
 import { RATES, fmtLen } from './scene.js';
 import { sunPosition, dateFrom } from './sun.js';
 import { download } from '../engine/exporter.js';
+import { UNIT_NAMES as IMPU, UP_NAMES as IMPUP } from '../engine/importer.js';
 
 const $ = (el, s) => el.querySelector(s);
 const deg = r => r * 180 / Math.PI, rad = d => d * Math.PI / 180;
@@ -68,7 +69,7 @@ export function editPane(root, ctx) {
       <button class="btn ghost" data-a="mirx">${icon('mirror')} Mirror X</button><button class="btn ghost" data-a="mirz">${icon('mirror')} Mirror Z</button>
       <button class="btn ghost" data-a="drop">${icon('drop')} To ground</button>
       ${multi ? `<button class="btn ghost" data-a="group">${icon('group')} Group</button>` : ''}${u?.kind === 'group' ? `<button class="btn ghost" data-a="ungroup">${icon('ungroup')} Ungroup</button>` : ''}
-      <button class="btn ghost" data-a="frame">${icon('fit')} Frame</button><button class="btn ghost" data-a="del" style="color:var(--bad)">${icon('trash')} Delete</button></div>`;
+      <button class="btn ghost" data-a="frame">${icon('fit')} Frame</button><button class="btn ghost" data-a="isolate">${icon('eye')} Isolate <kbd>I</kbd></button><button class="btn ghost" data-a="del" style="color:var(--bad)">${icon('trash')} Delete</button></div>`;
   }
   const arrayHtml = () => `<details class="fold"><summary>${icon('array')} Array / repeat</summary><div><div class="seg" id="arrmode" style="margin-bottom:10px"><button data-m="lin" class="on">Linear</button><button data-m="pol">Around a point</button></div>
       <div class="field"><label>Copies</label><input type="number" id="arrn" min="2" max="60" value="4"></div>
@@ -115,9 +116,16 @@ export function editPane(root, ctx) {
   const lightHtml = l => `<h3>Light</h3><div class="field"><label>Type</label><select id="ltype"><option value="point" ${l.type === 'point' ? 'selected' : ''}>Point</option><option value="spot" ${l.type === 'spot' ? 'selected' : ''}>Spot</option></select></div>
       <div class="field"><label>Colour</label><input type="color" id="lcol" value="${l.color}"></div><div class="field"><label>Intensity</label><input type="range" id="lint" min="0" max="300" step="1" value="${l.intensity}"></div><div class="field"><label>Reach (m)</label><input type="range" id="ldist" min="2" max="80" step="1" value="${l.distance}"></div>${l.type === 'spot' ? `<div class="field"><label>Cone °</label><input type="range" id="lang" min="10" max="80" step="1" value="${l.angle || 40}"></div>` : ''}`;
   function importHtml(e) {
-    const st = sc.sources.get(e.userData.srcId)?.userData.imported; if (!st) return ''; return `<h3>Imported model</h3><dl class="kv"><dt>File</dt><dd>${esc(st.format)}</dd><dt>Meshes</dt><dd>${st.meshes}</dd><dt>Materials</dt><dd>${st.materials}</dd><dt>Textures</dt><dd>${st.textures}</dd></dl>
-      ${st.hint ? `<div class="card2 small">${esc(st.hint.text)} <button class="btn sm" data-a="hint" style="margin-top:8px">Apply ×${st.hint.factor}</button></div>` : ''}
-      <div class="small muted">Units in the file? Convert to metres:</div><div class="btn-grid"><button class="btn ghost sm" data-u="0.001">mm → m</button><button class="btn ghost sm" data-u="0.01">cm → m</button><button class="btn ghost sm" data-u="0.0254">in → m</button><button class="btn ghost sm" data-u="0.3048">ft → m</button></div>`;
+    const st = sc.sources.get(e.userData.srcId)?.userData.imported; if (!st) return ''; const imp = e.userData.imp || { unit: 'm', up: 'y', yaw: 0, flip: false, ground: true };
+    const opt = (o, cur) => Object.entries(o).map(([k, v]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${v}</option>`).join('');
+    return `<h3>Imported model</h3><dl class="kv"><dt>Format</dt><dd>${esc(st.format)}</dd><dt>Meshes · Materials</dt><dd>${st.meshes} · ${st.materials}</dd><dt>Textures</dt><dd>${st.textures}</dd><dt>Triangles</dt><dd>${st.tris.toLocaleString()}</dd></dl>
+      ${st.clay ? '<div class="card2 small">No colours came with this file (plain geometry). Use the Material picker, or re-import with its .mtl / textures or as a .zip.</div>' : ''}
+      <div class="field"><label>Real size in metres (W × H × D)</label><div class="xyz" id="impSize">${['x','y','z'].map(a => `<label>${a === 'y' ? 'H' : a === 'x' ? 'W' : 'D'}<input type="number" step="0.01" data-sz="${a}"></label>`).join('')}</div><p class="small faint">Type one value — the others follow, keeping proportions.</p></div>
+      <details class="fold" open><summary>Fix size &amp; orientation</summary><div>
+        <div class="field"><label>File units</label><select id="impUnit">${opt(IMPU, imp.unit)}</select></div>
+        <div class="field"><label>Up axis</label><select id="impUp">${opt(IMPUP, imp.up)}</select></div>
+        <div class="btn-grid"><button class="btn ghost sm" data-imp="yaw">↻ Turn 90°</button><button class="btn ghost sm" data-imp="flip">⇋ Mirror</button><button class="btn ghost sm" data-imp="ground">${imp.ground === false ? '⤓ Put on ground' : '⤓ On ground ✓'}</button><button class="btn ghost sm" data-imp="auto">✦ Auto-detect</button></div>
+        <p class="small faint" style="margin-top:6px">Models exported from Blender, CAD or SketchUp often use Z-up or millimetres. Change these until it looks right — scale, position and rotation above stay yours.</p></div></details>`;
   }
   function refreshInfo() { const e = cur; if (!e || !$(root, '#sizekv')) return; const info = sc.entityInfo(e); $(root, '#sizekv').innerHTML = `<dt>Size (W × H × D)</dt><dd>${f2(info.size.x)} × ${f2(info.size.y)} × ${f2(info.size.z)} m</dd>${info.vol != null ? `<dt>Volume</dt><dd>${f2(info.vol)} m³</dd><dt>Surface</dt><dd>${f2(info.area)} m²</dd>` : ''}${info.tris != null ? `<dt>Triangles</dt><dd>${Math.round(info.tris).toLocaleString()}</dd>` : ''}`; }
   function refreshXform() {
@@ -143,6 +151,10 @@ export function editPane(root, ctx) {
     $i('#ltype')?.addEventListener('change', ev => { const t = ev.target.value; const u = cur.userData; cur = sc.update(cur, { light: { ...u.light, type: t, intensity: t === 'spot' ? 80 : 30 }, name: t === 'spot' ? 'Spot light' : 'Point light' }); lastKey = null; render(true); });
     $i('#lcol')?.addEventListener('input', ev => lightUpd({ color: ev.target.value })); $i('#lint')?.addEventListener('input', ev => lightUpd({ intensity: +ev.target.value })); $i('#ldist')?.addEventListener('input', ev => lightUpd({ distance: +ev.target.value })); $i('#lang')?.addEventListener('input', ev => lightUpd({ angle: +ev.target.value }));
     ['#lcol', '#lint', '#ldist', '#lang'].forEach(s => $i(s)?.addEventListener('change', () => sc.commit('Light')));
+    if ($i('#impSize')) { const info = sc.entityInfo(cur); $i('#impSize').querySelectorAll('input').forEach(inp => { inp.value = f2(info.size[inp.dataset.sz], 3); inp.onchange = () => { const nv = parseFloat(inp.value), old = info.size[inp.dataset.sz]; if (nv > 0 && old > 0) { cur.scale.multiplyScalar(nv / old); sc.commit('Resize'); tools.refreshSelection(); refreshXform(); lastKey = null; render(true); } }; }); }
+    const impSet = patch => { const u = cur.userData; const imp = { ...(u.imp || {}), ...patch }; cur = sc.update(cur, { imp }, { commit: false, silent: true }); sc.commit('Fix import'); tools.refreshSelection(); lastKey = null; render(true); };
+    $i('#impUnit')?.addEventListener('change', ev => impSet({ unit: ev.target.value })); $i('#impUp')?.addEventListener('change', ev => impSet({ up: ev.target.value }));
+    root.querySelectorAll('[data-imp]').forEach(b => b.addEventListener('click', () => { const imp = cur.userData.imp || {}; const k = b.dataset.imp; if (k === 'yaw') impSet({ yaw: ((imp.yaw || 0) + 90) % 360 }); else if (k === 'flip') impSet({ flip: !imp.flip }); else if (k === 'ground') impSet({ ground: imp.ground === false }); else { const g = sc.sources.get(cur.userData.srcId).userData.imported.guess; impSet({ unit: g.unit, up: g.up, yaw: 0, flip: false }); } }));
     root.querySelectorAll('[data-u]').forEach(b => b.addEventListener('click', () => { const k = parseFloat(b.dataset.u); cur.scale.multiplyScalar(k); sc.commit('Scale units'); tools.refreshSelection(); refreshXform(); toast('Scaled ×' + k); }));
   }
   function wireCommon() {
@@ -193,11 +205,16 @@ export function viewPane(root, ctx) {
     <div class="seg" id="vproj"><button data-o="0" class="on">Perspective</button><button data-o="1">Orthographic</button></div>
     <div class="btn-grid"><button class="btn ghost" data-v="iso">Iso</button><button class="btn ghost" data-v="top">Top / plan</button><button class="btn ghost" data-v="front">Front</button><button class="btn ghost" data-v="back">Back</button><button class="btn ghost" data-v="left">Left</button><button class="btn ghost" data-v="right">Right</button></div>
     <h3>Display</h3>
-    <div class="seg" id="vmode"><button data-m="solid" class="on">Solid</button><button data-m="clay">Clay</button><button data-m="xray">X-ray</button><button data-m="wire">Wire</button></div>
-    <div class="field"><label>Backdrop</label><div class="seg" id="vtheme"><button data-t="dark" class="on">Dark</button><button data-t="light">Light</button><button data-t="sky">Sky</button></div></div>
+    <div class="seg" id="vmode"><button data-m="solid" class="on">Solid</button><button data-m="clay">Clay</button><button data-m="drawing">Drawing</button><button data-m="xray">X-ray</button><button data-m="wire">Wire</button></div>
+    <div class="field"><label>Backdrop</label><div class="seg" id="vtheme"><button data-t="dark">Studio</button><button data-t="light">Paper</button><button data-t="sky" class="on">Sky</button></div></div>
     <div class="field"><label>Exposure</label><input type="range" id="vexp" min="0.4" max="2" step="0.05" value="1"></div>
-    <div class="row" style="gap:18px"><label class="row small" style="gap:6px"><input type="checkbox" id="vgrid" checked> Grid</label><label class="row small" style="gap:6px"><input type="checkbox" id="vground" checked> Ground</label><label class="row small" style="gap:6px"><input type="checkbox" id="vshadow" checked> Shadows</label></div>
+    <div class="row" style="gap:18px"><label class="row small" style="gap:6px"><input type="checkbox" id="voutline" checked> Outlines</label><label class="row small" style="gap:6px"><input type="checkbox" id="vao" ${vp.ao.on ? 'checked' : ''}> Soft shading (AO)</label><label class="row small" style="gap:6px"><input type="checkbox" id="vgrid" checked> Grid</label><label class="row small" style="gap:6px"><input type="checkbox" id="vground" checked> Ground</label><label class="row small" style="gap:6px"><input type="checkbox" id="vshadow" checked> Shadows</label></div>
     <div class="field"><label>Grid size</label><select id="vgsize"><option value="20">20 m</option><option value="40">40 m</option><option value="60" selected>60 m</option><option value="100">100 m</option><option value="200">200 m</option></select></div>
+    <h3>Walk, views &amp; drawings</h3>
+    <div class="btn-grid"><button class="btn ghost" data-a="walk">${icon('hand')} Walk through <kbd>H</kbd></button><button class="btn ghost" data-a="sheet">${icon('sheet')} Drawing sheet (A3)</button></div>
+    <div class="row" style="gap:8px;margin-top:8px"><button class="btn sm" id="saveView">${icon('camera')} Save this view</button><button class="btn ghost sm" id="playTour">${icon('play')} Play tour</button></div>
+    <div id="viewList" class="ent-list" style="margin-top:8px"></div>
+    <p class="small faint">Saved views are stored in the project. For a drawing sheet, switch to Orthographic and a Top/Front/Right view first — the sheet gets a title block, scale and scale bar.</p>
     <h3>Section cut</h3>
     <label class="row small" style="gap:8px"><input type="checkbox" id="secon"> Slice the model with a plane</label>
     <div class="seg" id="secax"><button data-a="y" class="on">Plan (height)</button><button data-a="x">Section X</button><button data-a="z">Section Z</button></div>
@@ -217,9 +234,15 @@ export function viewPane(root, ctx) {
   const q = s => root.querySelector(s);
   q('#vproj').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; root.querySelectorAll('#vproj button').forEach(x => x.classList.toggle('on', x === b)); vp.setOrtho(b.dataset.o === '1'); tools.tc.camera = vp.camera; ctx.syncViewBtns?.(); });
   root.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) ctx.view(b.dataset.v); });
+  const drawViews = () => { q('#viewList').innerHTML = (sc.views || []).length ? sc.views.map((v, i) => `<div class="ent" data-vi="${i}"><span class="nm" data-go>${esc(v.name)}</span><button class="mini" data-del title="Delete">${icon('trash')}</button></div>`).join('') : '<p class="small faint">No saved views yet.</p>'; };
+  q('#saveView').addEventListener('click', () => { const n = prompt('Name this view', 'View ' + ((sc.views || []).length + 1)); if (n) ctx.saveView(n); });
+  q('#playTour').addEventListener('click', () => ctx.tour());
+  q('#viewList').addEventListener('click', e => { const r = e.target.closest('[data-vi]'); if (!r) return; const i = +r.dataset.vi; if (e.target.closest('[data-del]')) ctx.delView(i); else ctx.goView(i); });
+  sc.on('views', drawViews); sc.on('history', drawViews); drawViews();
+  root.addEventListener('click', e => { const b = e.target.closest('[data-a="walk"],[data-a="sheet"]'); if (b) ctx.action(b.dataset.a); });
   q('#vmode').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; root.querySelectorAll('#vmode button').forEach(x => x.classList.toggle('on', x === b)); vp.setMode(b.dataset.m); });
   q('#vtheme').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; root.querySelectorAll('#vtheme button').forEach(x => x.classList.toggle('on', x === b)); vp.setTheme(b.dataset.t); });
-  q('#vexp').addEventListener('input', e => vp.setExposure(+e.target.value)); q('#vgrid').addEventListener('change', e => vp.showGrid(e.target.checked)); q('#vground').addEventListener('change', e => vp.showGround(e.target.checked)); q('#vshadow').addEventListener('change', e => vp.setShadows(e.target.checked));
+  q('#vao').addEventListener('change', e => vp.setAO(e.target.checked)); q('#voutline').addEventListener('change', e => vp.setEdges(e.target.checked)); q('#vexp').addEventListener('input', e => vp.setExposure(+e.target.value)); q('#vgrid').addEventListener('change', e => vp.showGrid(e.target.checked)); q('#vground').addEventListener('change', e => vp.showGround(e.target.checked)); q('#vshadow').addEventListener('change', e => vp.setShadows(e.target.checked));
   q('#vgsize').addEventListener('change', e => vp.setGrid(+e.target.value, vp.gridStep || 1));
   // section
   let sax = 'y'; const sec = () => { const pos = +q('#secpos').value; q('#secval').textContent = pos.toFixed(2) + ' m'; vp.setSection(q('#secon').checked, sax, pos, q('#secflip').checked); };
