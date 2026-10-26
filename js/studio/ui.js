@@ -13,7 +13,7 @@ import { libraryPane, editPane, scenePane, viewPane, planPane } from './panels.j
 
 const $ = s => document.querySelector(s);
 const TABS = [['lib', 'Library', 'cube'], ['edit', 'Edit', 'move'], ['scene', 'Scene', 'layers'], ['view', 'View', 'eye'], ['plan', 'Plan', 'chart']];
-const RAIL = [['select', 'select', 'Select', 'V'], ['move', 'move', 'Move', 'T'], ['rotate', 'rotate', 'Rotate', 'R'], ['scale', 'scale', 'Scale', 'S'], '-', ['wall', 'wall', 'Wall', 'W'], ['room', 'house', 'Room', 'Q'], ['slab', 'polygon', 'Slab', 'F'], '-', ['measure', 'measure', 'Measure', 'M'], ['note', 'info', 'Note', 'N'], ['light', 'sun', 'Light', 'L']];
+const RAIL = [['select', 'select', 'Select', 'V'], ['move', 'move', 'Move', 'T'], ['rotate', 'rotate', 'Rotate', 'R'], ['scale', 'scale', 'Scale', 'S'], '-', ['wall', 'wall', 'Wall', 'W'], ['room', 'house', 'Room', 'Q'], ['slab', 'polygon', 'Slab', 'F'], '-', ['measure', 'measure', 'Measure', 'M'], ['area', 'target', 'Area', 'A'], ['note', 'info', 'Note', 'N'], ['light', 'sun', 'Light', 'L']];
 const HINTS = {
   select: 'Tap an object to select it · drag the arrows to move · Shift/Ctrl+click for several',
   move: 'Drag the coloured arrows or squares to move. Snap to grid is on by default.',
@@ -22,7 +22,7 @@ const HINTS = {
   wall: 'Click to place wall points · type a length and press Enter · double-click or Finish to end',
   room: 'Click two opposite corners — four walls and a floor are created',
   slab: 'Click the corners of the floor/roof outline · click the first point or Finish to close',
-  measure: 'Click two points (they snap to corners) to measure a distance',
+  area: 'Click the corners of a space, then Enter (or click the first point): you get edge dimensions plus area and perimeter.', measure: 'Click two points (they snap to corners) to measure a distance',
   note: 'Click a surface to drop a text note',
   place: 'Click to place · R rotates · Esc stops',
 };
@@ -143,16 +143,16 @@ export function initUI(ctx) {
   // ---------------------------------------------------------- shortcuts
   addEventListener('keydown', e => {
     const tag = e.target.tagName; const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'; const k = e.key; const mod = e.ctrlKey || e.metaKey;
-    if (k === 'Escape') { if (dlg.classList.contains('open')) return closeDlg(); if (!menu.hidden) { menu.hidden = true; return; } if (['wall', 'slab', 'room'].includes(tools.tool) && tools.pts.length) { tools.cancelDraw(); return; } if (tools.tool !== 'select') setTool('select'); else sc.clearSel(); return; }
+    if (k === 'Escape') { if (dlg.classList.contains('open')) return closeDlg(); if (!menu.hidden) { menu.hidden = true; return; } if (['wall', 'slab', 'room', 'area'].includes(tools.tool) && tools.pts.length) { tools.cancelDraw(); return; } if (tools.tool !== 'select') setTool('select'); else sc.clearSel(); return; }
     if (typing) { return; }
     if (mod && k.toLowerCase() === 'z') { e.preventDefault(); ctx.action(e.shiftKey ? 'redo' : 'undo'); return; } if (mod && k.toLowerCase() === 'y') { e.preventDefault(); ctx.action('redo'); return; }
     if (mod && k.toLowerCase() === 'd') { e.preventDefault(); ctx.action('dup'); return; } if (mod && k.toLowerCase() === 'a') { e.preventDefault(); sc.selectAll(); return; } if (mod && k.toLowerCase() === 's') { e.preventDefault(); ctx.action('save'); return; } if (mod && k.toLowerCase() === 'i') { e.preventDefault(); ctx.action('import'); return; }
     if (mod) return;
-    if (k === 'Delete' || k === 'Backspace') { e.preventDefault(); ctx.action('del'); return; } if (k === 'Enter' && ['wall', 'slab'].includes(tools.tool)) { tools.finishDraw(); return; }
+    if (k === 'Delete' || k === 'Backspace') { e.preventDefault(); ctx.action('del'); return; } if (k === 'Enter' && ['wall', 'slab', 'area'].includes(tools.tool)) { tools.finishDraw(); return; }
     if (tools.tool === 'wall' && /^[0-9.]$/.test(k) && tools.pts.length) { const i = $('#wlen'); if (i) { i.focus(); } return; }
-    const map = { v: 'select', t: 'move', r: 'rotate', s: 'scale', w: 'wall', q: 'room', f: 'slab', m: 'measure', n: 'note' }; const lk = k.toLowerCase();
+    const map = { v: 'select', t: 'move', r: 'rotate', s: 'scale', w: 'wall', q: 'room', f: 'slab', m: 'measure', a: 'area', n: 'note' }; const lk = k.toLowerCase();
     if (lk === 'r' && tools.tool === 'place') { tools.rotatePlace(90); return; }
-    if (map[lk]) { setTool(map[lk]); return; } if (lk === 'l') { const c = vp.controls.target; sc.addLight('point', [c.x, 3, c.z]); return; } if (lk === 'g') { tools.setSnap({ on: !tools.snap.on }); renderOpts(); toast('Grid snap ' + (tools.snap.on ? 'on' : 'off')); return; } if (lk === 'o') { vp.setOrtho(!vp.orthoOn); tools.tc.camera = vp.camera; syncViewBtns(); return; }
+    if (map[lk]) { setTool(map[lk]); return; } if (lk === 'i') { ctx.action('isolate'); return; } if (lk === 'h') { ctx.action('walk'); return; } if (lk === 'l') { const c = vp.controls.target; sc.addLight('point', [c.x, 3, c.z]); return; } if (lk === 'g') { tools.setSnap({ on: !tools.snap.on }); renderOpts(); toast('Grid snap ' + (tools.snap.on ? 'on' : 'off')); return; } if (lk === 'o') { vp.setOrtho(!vp.orthoOn); tools.tc.camera = vp.camera; syncViewBtns(); return; }
     if (k === '?') { ctx.action('help'); return; } const views = { 1: 'iso', 2: 'top', 3: 'front', 4: 'right', 5: 'back', 6: 'left' }; if (views[k]) { ctx.view(views[k]); return; } if (k === 'Home') { ctx.view('fit'); return; } if (k === '.') { ctx.action('frame'); return; }
     const nudge = { ArrowLeft: [-1, 0, 0], ArrowRight: [1, 0, 0], ArrowUp: [0, 0, -1], ArrowDown: [0, 0, 1], PageUp: [0, 1, 0], PageDown: [0, -1, 0] }[k];
     if (nudge && sc.sel.length) { e.preventDefault(); const st = e.shiftKey ? tools.snap.step * 4 : tools.snap.step; sc.sel.forEach(x => { if (!x.userData.locked && x.userData.kind !== 'dim') x.position.add(new THREE.Vector3(...nudge).multiplyScalar(st)); }); clearTimeout(nudge.t); ctx._nt = setTimeout(() => { sc.commit('Nudge'); }, 400); tools.refreshSelection(); ctx.edit?.refreshXform(); }

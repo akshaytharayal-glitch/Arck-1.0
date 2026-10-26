@@ -1,8 +1,6 @@
-import * as THREE from 'three';
 import { pageInit } from '../ui/chrome.js';
 import { icon } from '../ui/icons.js';
-import { Viewport } from '../engine/viewport.js';
-import { build, REGISTRY } from '../catalog/index.js';
+import { REGISTRY } from '../catalog/index.js';
 import { lazyThumbs } from '../engine/thumbs.js';
 import { esc } from '../ui/params.js';
 pageInit('home');
@@ -13,10 +11,13 @@ const SHOW = ['dome', 'arch-gothic', 'truss-warren', 'torii-gate', 'column-ionic
 document.getElementById('show').innerHTML = SHOW.map(id => `<a class="tile" href="item.html?id=${id}"><div class="thumb" data-thumb="${id}"></div></a>`).join('');
 lazyThumbs(document.getElementById('show'));
 
-// hero scene: slowly turning composition
-const vp = new Viewport(document.getElementById('hero'), { grid: 40, shadows: true }); vp.setTheme('dark'); vp.showGrid(false);
-const g = new THREE.Group(); const add = (id, x, z, ry = 0, s = 1, p) => { const o = build(id, p); o.position.set(x, 0, z); o.rotation.y = ry; o.scale.setScalar(s); g.add(o); return o; };
-add('torii-gate', 0, 0, 0, 0.9); add('dome', 0, -9, 0, 0.55); add('column-doric', -4.5, -3); add('column-doric', 4.5, -3); add('stairs-straight', 0, 3.5, Math.PI, 0.8, { H: 1.2, n: 8, run: 0.3, w: 3, rail: false }); add('tree-conifer', -8, 2); add('tree-conifer', 8.5, 3);
-g.traverse(o => { if (o.isMesh) o.castShadow = o.receiveShadow = true; }); vp.world.add(g); vp.frame(g, 'iso'); vp.refit(g, 0.72);
-vp.controls.enableZoom = false; vp.controls.autoRotate = !matchMedia('(prefers-reduced-motion: reduce)').matches; vp.controls.autoRotateSpeed = 0.9;
-vp.onFrame(() => { if (vp.controls.autoRotate) { vp.controls.update(); vp.invalidate(); } });
+const T = [['house', 'Brick house', 'Textured walls, roof, fence and garden'], ['temple', 'Doric temple', 'Fluted columns on a stepped base'], ['cloister', 'Cloister court', 'Arcades around a garden'], ['rotunda', 'Rotunda', 'Domed circular hall'], ['hall', 'Timber hall', 'Trusses and a long nave'], ['bridge', 'Footbridge', 'Span, piers and railings'], ['shrine', 'Shrine', 'Torii gate and pavilion']];
+const rm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sl = document.getElementById('slides'), dots = document.getElementById('dots');
+sl.innerHTML = T.map(([id], i) => `<img src="assets/img/showcase/${id}.jpg" alt="" ${i ? 'loading="lazy"' : ''} class="${i ? '' : 'on'}">`).join('');
+dots.innerHTML = T.map(([, n], i) => `<button aria-label="${n}" class="${i ? '' : 'on'}"></button>`).join('');
+let cur = 0, timer;
+const show = i => { cur = i; [...sl.children].forEach((e, k) => e.classList.toggle('on', k === i)); [...dots.children].forEach((e, k) => e.classList.toggle('on', k === i)); };
+[...dots.children].forEach((b, i) => b.onclick = () => { show(i); clearInterval(timer); });
+if (!rm) timer = setInterval(() => show((cur + 1) % T.length), 5500);
+document.getElementById('gal').innerHTML = T.map(([id, n, d], i) => `<a class="gcard${i === 0 ? ' big' : ''}" href="studio.html?template=${id}"><img src="assets/img/showcase/${id}.jpg" alt="${esc(n)}" loading="lazy"><span class="cap"><b>${esc(n)}</b><small>${esc(d)}</small></span></a>`).join('');

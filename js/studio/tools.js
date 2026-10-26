@@ -4,7 +4,7 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { build } from '../catalog/index.js';
 import { fmtLen } from './scene.js';
 
-export const TOOLS = ['select', 'move', 'rotate', 'scale', 'wall', 'room', 'slab', 'measure', 'note', 'place'];
+export const TOOLS = ['select', 'move', 'rotate', 'scale', 'wall', 'room', 'slab', 'measure', 'area', 'note', 'place'];
 const GIZMO = { select: 'translate', move: 'translate', rotate: 'rotate', scale: 'scale' };
 
 export class Tools {
@@ -16,12 +16,14 @@ export class Tools {
     this.pivot = new THREE.Object3D(); vp.helpers.add(this.pivot); this.boxes = new THREE.Group(); vp.helpers.add(this.boxes);
     this.preview = new THREE.Group(); vp.helpers.add(this.preview); this.preview.renderOrder = 8;
 
-    this.tc = new TransformControls(vp.camera, vp.canvas); this.tc.setSize(vp.coarse ? 1.25 : 0.9); this.tc.enabled = true;
+    this.tc = new TransformControls(vp.camera, vp.canvas); this.tc.setSize(vp.coarse ? 0.95 : 0.7); this.tc.enabled = true;
     this.tcHelper = this.tc.getHelper(); this.tcHelper.userData.helper = true; vp.scene.add(this.tcHelper);
     this.tc.addEventListener('dragging-changed', e => { vp.controls.enabled = !e.value; if (e.value) this._dragStart(); else this._dragEnd(); });
     this.tc.addEventListener('objectChange', () => this._dragMove());
     this.tc.addEventListener('change', () => vp.invalidate());
 
+    // two-finger pinch / pan must never grab a gizmo handle
+    const ptr = new Set(); vp.canvas.addEventListener('pointerdown', e => { ptr.add(e.pointerId); this.tc.enabled = ptr.size < 2; }, true); const rel = e => { ptr.delete(e.pointerId); this.tc.enabled = ptr.size < 2; }; vp.canvas.addEventListener('pointerup', rel, true); vp.canvas.addEventListener('pointercancel', rel, true);
     sc.on('selection', () => this.refreshSelection()); sc.on('change', () => this.refreshBoxes());
     this._bind(); this.setTool('select'); vp.onFrame(() => this._frame());
   }
@@ -29,10 +31,10 @@ export class Tools {
   // ------------------------------------------------------------ tool state
   setTool(t, opts) {
     if (t !== 'place') this._clearGhost();
-    if (this.tool === 'wall' || this.tool === 'room' || this.tool === 'slab') this.cancelDraw();
+    if (this.tool === 'wall' || this.tool === 'room' || this.tool === 'slab' || this.tool === 'area') this.cancelDraw();
     this.tool = t; this.measureA = null; this.clearPreview(); this.typed = '';
     if (t === 'place' && opts) { this.place = opts; this._makeGhost(); } else if (t !== 'place') this.place = null;
-    this.vp.canvas.style.cursor = ['wall', 'room', 'slab', 'measure', 'note', 'place'].includes(t) ? 'crosshair' : 'default';
+    this.vp.canvas.style.cursor = ['wall', 'room', 'slab', 'measure', 'area', 'note', 'place'].includes(t) ? 'crosshair' : 'default';
     this.refreshSelection(); this.hooks.tool?.(t);
   }
   _gizmoOK(e) { return e && !['dim'].includes(e.userData.kind) && !e.userData.locked; }
@@ -73,7 +75,7 @@ export class Tools {
       if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 7 || performance.now() - d.t > 600) return; this._click(e);
     });
     cv.addEventListener('pointermove', e => this._hover(e));
-    cv.addEventListener('dblclick', e => { if (this.tool === 'wall' || this.tool === 'slab') this.finishDraw(); });
+    cv.addEventListener('dblclick', e => { if (this.tool === 'wall' || this.tool === 'slab' || this.tool === 'area') this.finishDraw(); });
     cv.addEventListener('pointerleave', () => { this.hover = null; this.clearPreview(); });
   }
   _snapPt(p, anchor) {
@@ -104,12 +106,13 @@ export class Tools {
     if (t === 'wall') return this._wallClick(ev);
     if (t === 'room') return this._roomClick(ev);
     if (t === 'slab') return this._slabClick(ev);
+    if (t === 'area') return this._slabClick(ev);
     if (t === 'measure') return this._measureClick(ev);
     if (t === 'note') { const { pt } = this._surfacePoint(ev); if (pt) { const txt = prompt('Note text', 'Entrance'); if (txt) this.sc.addNote(txt, pt.toArray()); } return; }
     if (t === 'place') return this._placeClick(ev);
   }
   _hover(ev) {
-    const t = this.tool; if (!['wall', 'room', 'slab', 'measure', 'place'].includes(t)) return; if (ev.pointerType === 'touch' && !this.pts.length && t !== 'place') return;
+    const t = this.tool; if (!['wall', 'room', 'slab', 'area', 'measure', 'place'].includes(t)) return; if (ev.pointerType === 'touch' && !this.pts.length && t !== 'place') return;
     if (t === 'place') { const { pt } = this._surfacePoint(ev); if (pt) this._moveGhost(pt); return; }
     const sp = t === 'measure' ? this._surfacePoint(ev, true) : { pt: this.vp.groundPoint(ev.clientX, ev.clientY, this.draw.y) };
     if (!sp.pt) return; this.hover = t === 'measure' ? sp.pt : this._snapPt(sp.pt, this.pts[this.pts.length - 1]); this._drawPreview();
@@ -124,7 +127,7 @@ export class Tools {
     this.clearPreview(); const t = this.tool, h = this.hover; if (!h) return;
     const mk = h.snapped ? 0x7ccf8f : 0xf3d36b; this.preview.add(this._marker(h, mk));
     if (t === 'wall' && this.pts.length) { const a = this.pts[this.pts.length - 1]; this.preview.add(this._line([a, h])); this.preview.add(this._label(fmtLen(a.distanceTo(h)), a.clone().add(h).multiplyScalar(0.5))); }
-    if (t === 'slab' && this.pts.length) { this.preview.add(this._line([...this.pts, h], 0xf3d36b)); this.preview.add(this._label(`${this.pts.length} pts`, h)); }
+    if ((t === 'slab' || t === 'area') && this.pts.length) { this.preview.add(this._line([...this.pts, h], 0xf3d36b)); this.preview.add(this._label(`${this.pts.length} pts`, h)); }
     if (t === 'room' && this.pts.length) { const a = this.pts[0], c = [a, new THREE.Vector3(h.x, a.y, a.z), h, new THREE.Vector3(a.x, a.y, h.z)]; this.preview.add(this._line(c, 0xf3d36b, true)); this.preview.add(this._label(`${fmtLen(Math.abs(h.x - a.x))} × ${fmtLen(Math.abs(h.z - a.z))}`, h)); }
     if (t === 'measure') { if (this.measureA) { this.preview.add(this._marker(this.measureA, 0xd0a324)); this.preview.add(this._line([this.measureA, h])); this.preview.add(this._label(fmtLen(this.measureA.distanceTo(h)), this.measureA.clone().add(h).multiplyScalar(0.5))); } }
   }
@@ -147,9 +150,17 @@ export class Tools {
   }
   closeShape() { if (this.pts.length > 2) { const f = this.pts[0]; if (this.tool === 'wall') this.addDrawPoint(f.clone()); else this.finishDraw(); } }
   finishDraw() {
+    if (this.tool === 'area' && this.pts.length >= 3) { this._finishArea(); this.pts = []; this._drawn = null; this.clearPreview(); this.hooks.drawing?.(0); return; }
     if (this.tool === 'slab' && this.pts.length >= 3) { const s = this.sc.addSlab(this.pts, { T: this.draw.slabT, mat: this.draw.slabMat, y: this.draw.y }); this.sc.commit('Add slab'); this.sc.select([s]); }
     else if (this._drawn?.length) { this.sc.commit('Draw walls'); this.sc.select(this._drawn); }
     this.pts = []; this._drawn = null; this.clearPreview(); this.hooks.drawing?.(0);
+  }
+  /** Area tool: dimension every edge and drop a note with area + perimeter at the centroid. */
+  _finishArea() {
+    const p = this.pts; let A = 0, cx = 0, cz = 0, per = 0; for (let i = 0; i < p.length; i++) { const a = p[i], b = p[(i + 1) % p.length]; const cr = a.x * b.z - b.x * a.z; A += cr; cx += (a.x + b.x) * cr; cz += (a.z + b.z) * cr; per += a.distanceTo(b); }
+    A /= 2; const area = Math.abs(A); if (area < 1e-6) return; cx /= (6 * A); cz /= (6 * A);
+    for (let i = 0; i < p.length; i++) { const a = p[i], b = p[(i + 1) % p.length]; if (a.distanceTo(b) > 0.05) this.sc.addDim(a, b); }
+    this.sc.addNote(`${area.toFixed(2)} m² · perimeter ${per.toFixed(2)} m`, [cx, p[0].y + 0.05, cz]); this.hooks.toast?.(`Area ${area.toFixed(2)} m² (${(area * 10.7639).toFixed(1)} ft²)`);
   }
   cancelDraw() { if (this._drawn?.length) this.sc.remove(this._drawn, false); this._drawn = null; this.pts = []; this.clearPreview(); this.hooks.drawing?.(0); }
   undoPoint() { if (this.tool === 'wall' && this._drawn?.length) { this.sc.remove(this._drawn.pop(), false); this.pts.pop(); this._drawPreview(); } else if (this.pts.length) { this.pts.pop(); this._drawPreview(); } }

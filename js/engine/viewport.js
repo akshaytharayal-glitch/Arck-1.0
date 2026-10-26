@@ -1,12 +1,15 @@
 // Reusable 3D viewport: renderer, cameras, orbit controls, lighting/sun, ground, render modes, section plane, screenshots.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { makeSkyTexture, makeBackground, SKIES } from './sky.js';
+import { addEdges, removeEdges, edgeStyle } from './edges.js';
+import { AO } from './post.js';
+import { Walk } from './walk.js';
 
 export const THEMES = {
   dark:  { bg: 0x120f08, ground: 0x2a2314, grid1: 0xd0a324, grid2: 0x4b3d16 },
   light: { bg: 0xeee8d8, ground: 0xd9d1bb, grid1: 0x8a6a10, grid2: 0xb9ad8a },
-  sky:   { bg: 0xaed4ea, ground: 0x8aa377, grid1: 0x2f5d3a, grid2: 0x6d8f66 },
+  sky:   { bg: 0xaed4ea, ground: 0xc9cdc6, grid1: 0x6f7568, grid2: 0xaab0a4 },
 };
 
 export class Viewport {
@@ -24,14 +27,13 @@ export class Viewport {
     this.scene = new THREE.Scene();
     this.world = new THREE.Group(); this.world.name = 'world'; this.scene.add(this.world);   // user content
     this.helpers = new THREE.Group(); this.helpers.name = 'helpers'; this.scene.add(this.helpers); // gizmos etc.
-    const pm = new THREE.PMREMGenerator(this.renderer);
-    this.scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; this.scene.environmentIntensity = 0.55; pm.dispose();
+    this.walk = null; this.ao = new AO(this.renderer); this.ao.on = opts.ao ?? false; this.envCache = {}; this.edgesOn = opts.edges ?? false; this._R = 10; this._lastR = 0;
 
     this.persp = new THREE.PerspectiveCamera(45, 1, 0.05, 4000); this.persp.position.set(14, 11, 16);
     this.ortho = new THREE.OrthographicCamera(-10, 10, 10, -10, -2000, 4000);
     this.camera = this.persp; this.orthoOn = false;
     this.controls = new OrbitControls(this.camera, this.canvas);
-    Object.assign(this.controls, { enableDamping: true, dampingFactor: 0.09, maxPolarAngle: Math.PI * 0.499, screenSpacePanning: true, zoomSpeed: 0.9, rotateSpeed: this.coarse ? 0.7 : 0.9 });
+    Object.assign(this.controls, { enableDamping: true, dampingFactor: 0.09, maxPolarAngle: Math.PI * 0.499, screenSpacePanning: true, zoomSpeed: 1.0, zoomToCursor: true, minDistance: 0.02, maxDistance: 5e5, rotateSpeed: this.coarse ? 0.7 : 0.9 });
     this.controls.addEventListener('change', () => this.invalidate());
     this.controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 
@@ -73,17 +75,45 @@ export class Viewport {
     for (const fn of this.listeners) fn();
     if (this.dirty || moved) { this.dirty = false; this.render(); }
   }
-  render() { this.renderer.clippingPlanes = this.clipOn ? [this.clip] : []; this.renderer.render(this.scene, this.camera); }
-  dispose() { this.running = false; cancelAnimationFrame(this._raf); this._ro.disconnect(); document.removeEventListener('visibilitychange', this._onVis); this.controls.dispose(); this.renderer.dispose(); this.canvas.remove(); }
+  /** Keep near/far and fog sensible for any model size so zooming never clips or stalls. */
+  _updateClip() {
+    const now = performance.now(); if (now - this._lastR > 350) { this._lastR = now; const b = this.contentBounds(); this._R = Math.max(5, b.getSize(new THREE.Vector3()).length() / 2); }
+    const dist = this.camera.position.distanceTo(this.controls.target), R = this._R;
+    if (this.camera.isPerspectiveCamera) { const near = THREE.MathUtils.clamp(dist / 400, 0.004, 40), far = Math.max(dist + R * 6, near * 20000, 500); if (Math.abs(near - this.persp.near) > near * 0.05 || Math.abs(far - this.persp.far) > far * 0.05) { this.persp.near = near; this.persp.far = far; this.persp.updateProjectionMatrix(); } }
+    else { const e = (dist + R * 6) * 2; if (this.ortho.far !== e) { this.ortho.near = -e; this.ortho.far = e; this.ortho.updateProjectionMatrix(); } }
+    if (this.scene.fog) { this.scene.fog.near = Math.max(R * 6, 150); this.scene.fog.far = Math.max(R * 40, 900); }
+    const sd = Math.max(120, R * 3.2); if (Math.abs(sd - (this._sd || 0)) > 5) { this._sd = sd; this.fitShadow(this.shadowR); this.setSun(this.sunAz, this.sunEl); }
+  }
+  render() {
+    this._updateClip(); this.renderer.clippingPlanes = this.clipOn ? [this.clip] : [];
+    if (this.ao.on && (this.mode === 'solid' || this.mode === 'clay')) { try { this.ao.render(this.scene, this.camera, this._R); } catch (e) { console.warn('AO disabled:', e); this.ao.on = false; this.renderer.setRenderTarget(null); this.renderer.render(this.scene, this.camera); } }
+    else this.renderer.render(this.scene, this.camera);
+  }
+  /** Smoothly move the camera to a saved view {pos,target,ortho}. */
+  flyTo(v, ms = 900) {
+    if (this.walk?.on) this.walk.stop(); if (!!v.ortho !== this.orthoOn) this.setOrtho(!!v.ortho);
+    const p0 = this.camera.position.clone(), t0 = this.controls.target.clone(), p1 = new THREE.Vector3(...v.pos), t1 = new THREE.Vector3(...v.target), st = performance.now(); cancelAnimationFrame(this._fly);
+    const step = () => { const k = Math.min(1, (performance.now() - st) / ms), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; this.camera.position.lerpVectors(p0, p1, e); this.controls.target.lerpVectors(t0, t1, e); if (this.orthoOn) this._fitOrtho(); this.controls.update(); this.invalidate(); if (k < 1) this._fly = requestAnimationFrame(step); else this._fly = 0; };
+    step(); return new Promise(r => setTimeout(r, ms));
+  }
+  cameraState() { return { pos: this.camera.position.toArray().map(x => +x.toFixed(3)), target: this.controls.target.toArray().map(x => +x.toFixed(3)), ortho: this.orthoOn }; }
+  startWalk(from) { this.walk ||= new Walk(this); this.walk.start(from); }
+  setAO(on) { this.ao.on = on; this.invalidate(); }
+  dispose() { this.ao.dispose(); this.running = false; cancelAnimationFrame(this._raf); this._ro.disconnect(); document.removeEventListener('visibilitychange', this._onVis); this.controls.dispose(); this.renderer.dispose(); this.canvas.remove(); }
 
   // ----- environment
   setTheme(name) {
-    const t = THEMES[name] || THEMES.dark; this.theme = name;
-    this.scene.background = new THREE.Color(t.bg); this.ground.material.color.setHex(t.ground);
-    this.scene.fog = new THREE.Fog(t.bg, 220, 700);
+    const t = THEMES[name] || THEMES.dark; this.theme = name; const sk = SKIES[name] || SKIES.dark; this.bgCache ||= {};
+    this.envCache[name] ||= makeSkyTexture(this.renderer, name); this.scene.environment = this.envCache[name]; this.scene.environmentIntensity = sk.env;
+    this.scene.background = this.bgCache[name] ||= makeBackground(name); this.ground.material.color.setHex(t.ground);
+    this.renderer.toneMappingExposure = sk.exposure * (this.expMul || 1); this.hemi.intensity = sk.hemi; this.sun.intensity = sk.sun;
+    this.scene.fog = new THREE.Fog(new THREE.Color(sk.bgMid), 220, 900);
     if (this.grid) { this.grid.material.color?.setHex?.(t.grid1); this._recolorGrid(); }
     this.invalidate();
   }
+  /** Outline overlay on/off (applies to everything in the world group + future decorate() calls). */
+  setEdges(on) { this.edgesOn = on; if (on) addEdges(this.world); else removeEdges(this.world); this.invalidate(); }
+  decorate(obj) { if (this.edgesOn) addEdges(obj); if (this._swapMat) obj.traverse(o => { if (o.isMesh && !o.userData.isEdges && !o.userData.helper) { o.userData._m ??= o.material; o.material = this._swapMat; } }); if (this.mode === 'wire' || this.mode === 'xray') this._edgeVis(false); }
   _recolorGrid() { const t = THEMES[this.theme]; if (!this.grid) return; this.grid.material.opacity = 0.5; this.grid.material.transparent = true; this.grid.material.color.setHex(t.grid2); if (this.grid.userData.main) this.grid.userData.main.material.color.setHex(t.grid1); }
   setGrid(size = 60, step = 1) {
     if (this.grid) { this.scene.remove(this.grid); this.grid.geometry.dispose(); }
@@ -100,21 +130,28 @@ export class Viewport {
     if (intensity !== undefined) this.sun.intensity = intensity; const warm = THREE.MathUtils.clamp(el / 60, 0, 1); this.sun.color.setRGB(1, 0.72 + warm * 0.26, 0.5 + warm * 0.4); this.invalidate();
   }
   fitShadow(r) {
-    r = Math.max(6, r); this.shadowR = r; const c = this.sun.shadow.camera; c.left = c.bottom = -r; c.right = c.top = r; c.near = 1; c.far = 400; c.updateProjectionMatrix(); this.invalidate();
+    r = Math.max(6, r); this.shadowR = r; const c = this.sun.shadow.camera; c.left = c.bottom = -r; c.right = c.top = r; c.near = 1; c.far = (this._sd || 120) * 2.4; c.updateProjectionMatrix(); this.invalidate();
   }
-  setExposure(v) { this.renderer.toneMappingExposure = v; this.invalidate(); }
+  setExposure(v) { this.expMul = v; this.renderer.toneMappingExposure = (SKIES[this.theme] || SKIES.dark).exposure * v; this.invalidate(); }
   setShadows(v) { this.sun.castShadow = v; this.renderer.shadowMap.enabled = v; this.scene.traverse(o => { if (o.material) { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(m => m.needsUpdate = true); } }); this.invalidate(); }
 
   // ----- render modes
   setMode(mode) {
-    this.mode = mode;
-    const M = this._modeMats;
+    this.mode = mode; const M = this._modeMats; this._restoreMats();
+    const hideEdges = mode === 'wire' || mode === 'xray'; this._edgeVis(!hideEdges);
     if (mode === 'solid') this.scene.overrideMaterial = null;
     else if (mode === 'wire') this.scene.overrideMaterial = M.wire ??= new THREE.MeshBasicMaterial({ color: 0xd0a324, wireframe: true });
     else if (mode === 'xray') this.scene.overrideMaterial = M.xray ??= new THREE.MeshStandardMaterial({ color: 0xf3d36b, transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide, roughness: 0.6 });
-    else if (mode === 'clay') this.scene.overrideMaterial = M.clay ??= new THREE.MeshStandardMaterial({ color: 0xcfc6b0, roughness: 0.95, metalness: 0 });
+    else if (mode === 'clay') this.scene.overrideMaterial = null, this._swapMats(M.clay ??= new THREE.MeshStandardMaterial({ color: 0xd8d0bd, roughness: 0.95, metalness: 0 }));
+    else if (mode === 'drawing') { this.scene.overrideMaterial = null; this._swapMats(M.draw ??= new THREE.MeshBasicMaterial({ color: 0xffffff, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 })); this._edgeStrength(1); if (!this.edgesOn) this.setEdges(true); }
+    if (mode !== 'drawing') this._edgeStrength(0);
     this.invalidate();
   }
+  /** Swap every mesh material (keeps edge lines untouched, unlike scene.overrideMaterial). */
+  _swapMats(m) { this._swapped = true; this.world.traverse(o => { if (o.isMesh && !o.userData.isEdges && !o.userData.helper) { o.userData._m ??= o.material; o.material = m; } }); this._swapMat = m; }
+  _restoreMats() { if (!this._swapped) return; this._swapped = false; this._swapMat = null; this.world.traverse(o => { if (o.userData._m) { o.material = o.userData._m; delete o.userData._m; } }); }
+  _edgeVis(v) { this.world.traverse(o => { if (o.userData.isEdges) o.visible = v; }); }
+  _edgeStrength(on) { edgeStyle(on); }
 
   // ----- section plane  (axis 'x'|'y'|'z', position in metres, flip)
   setSection(on, axis = 'y', pos = 1.5, flip = false) {
@@ -145,8 +182,8 @@ export class Viewport {
   refit(obj, pad = 1.0) {
     const b = new THREE.Box3().setFromObject(obj); if (b.isEmpty()) return; const c = b.getCenter(new THREE.Vector3()), r = b.getSize(new THREE.Vector3()).length() * 0.5 * pad;
     const dir = this.camera.position.clone().sub(this.controls.target); if (dir.lengthSq() < 1e-6) dir.set(1, 0.8, 1.15); dir.normalize();
-    const dist = Math.max(r, 0.5) / Math.sin(THREE.MathUtils.degToRad(this.persp.fov / 2)) * 0.9; this.controls.target.copy(c); this.camera.position.copy(c).addScaledVector(dir, dist);
-    this.persp.far = Math.max(4000, dist * 20); this.persp.updateProjectionMatrix(); this.fitShadow(r * 1.4); this.sun.target.position.set(c.x, 0, c.z); this.setSun(this.sunAz, this.sunEl); if (this.orthoOn) this._fitOrtho(); this.controls.update(); this.invalidate();
+    const dist = Math.max(r, 0.5) / Math.sin(THREE.MathUtils.degToRad(this.persp.fov / 2)) * 0.9; this.controls.target.copy(c); this.camera.position.copy(c).addScaledVector(dir, dist); this._lastR = 0;
+ this.fitShadow(r * 1.4); this.sun.target.position.set(c.x, 0, c.z); this.setSun(this.sunAz, this.sunEl); if (this.orthoOn) this._fitOrtho(); this.controls.update(); this.invalidate();
   }
   screenshot(type = 'image/png', scale = 1) {
     const w = this.el.clientWidth, h = this.el.clientHeight; if (scale !== 1) { this.renderer.setPixelRatio(scale); this.renderer.setSize(w, h, false); }

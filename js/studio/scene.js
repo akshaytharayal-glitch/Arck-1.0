@@ -6,6 +6,7 @@ import { build, getItem, defaults } from '../catalog/index.js';
 import { MATERIALS } from '../engine/materials.js';
 import { restyle } from '../engine/restyle.js';
 import { measureObject, triCount } from '../engine/geom.js';
+import { orient } from '../engine/importer.js';
 import { extrude, polyShape } from '../catalog/kit.js';
 import { prismY } from '../catalog/shapes.js';
 
@@ -29,7 +30,7 @@ export class StudioScene {
   _content(d) {
     let c;
     if (d.kind === 'catalog') { c = build(d.catalogId, d.params); this._applyOverride(c, d.mat, false); }
-    else if (d.kind === 'import') { const src = this.sources.get(d.srcId); if (!src) throw new Error('Missing imported source ' + d.srcId); c = src.clone(true); if (d.mat) this._applyOverride(c, d.mat, true); else c.traverse(o => { if (o.isMesh && o.userData.origMat) o.material = o.userData.origMat; }); }
+    else if (d.kind === 'import') { const src = this.sources.get(d.srcId); if (!src) throw new Error('Missing imported source ' + d.srcId); c = src.clone(true); orient(c, d.imp || src.userData.imp || {}); if (d.mat) this._applyOverride(c, d.mat, true); else c.traverse(o => { if (o.isMesh && o.userData.origMat) o.material = o.userData.origMat; }); }
     else if (d.kind === 'slab') { const sh = polyShape(d.pts.map(([x, z]) => [x, -z])); c = new THREE.Group(); const m = prismY(sh, d.T, d.mat?.key || 'concrete'); c.add(m); if (d.mat) this._applyOverride(c, d.mat, false); }
     else if (d.kind === 'group') { c = new THREE.Group(); for (const ch of d.children) { const cc = this._content(ch); this._xf(cc, ch); c.add(cc); } }
     else if (d.kind === 'light') c = makeLight(d.light);
@@ -38,19 +39,19 @@ export class StudioScene {
     c.userData.isContent = true; return c;
   }
   _xf(o, d) { o.position.fromArray(d.pos || [0, 0, 0]); o.rotation.set(...(d.rot || [0, 0, 0])); o.scale.fromArray(d.scl || [1, 1, 1]); }
-  _sig(d) { return JSON.stringify([d.kind, d.catalogId, d.params, d.mat, d.srcId, d.text, d.light, d.a, d.b, d.pts, d.T, d.children?.map(c => [this._sig(c), c.pos, c.rot, c.scl])]); }
+  _sig(d) { return JSON.stringify([d.kind, d.catalogId, d.params, d.mat, d.srcId, d.text, d.light, d.a, d.b, d.pts, d.T, d.imp, d.children?.map(c => [this._sig(c), c.pos, c.rot, c.scl])]); }
 
   _make(d) {
-    const e = new THREE.Group(); e.userData = { entity: true, id: d.id, kind: d.kind, name: d.name, catalogId: d.catalogId, params: d.params, mat: d.mat || null, srcId: d.srcId, layer: d.layer || 'L1', locked: !!d.locked, hidden: !!d.hidden, light: d.light, text: d.text, a: d.a, b: d.b, pts: d.pts, T: d.T, children: d.children, sig: this._sig(d) };
+    const e = new THREE.Group(); e.userData = { entity: true, id: d.id, kind: d.kind, name: d.name, catalogId: d.catalogId, params: d.params, mat: d.mat || null, srcId: d.srcId, imp: d.imp, layer: d.layer || 'L1', locked: !!d.locked, hidden: !!d.hidden, light: d.light, text: d.text, a: d.a, b: d.b, pts: d.pts, T: d.T, children: d.children, sig: this._sig(d) };
     e.add(this._content(d)); this._xf(e, d); e.name = d.name; this._applyVis(e); return e;
   }
   _applyVis(e) { const L = this.layers.find(l => l.id === e.userData.layer); e.visible = !e.userData.hidden && (L ? L.visible : true); }
   describe(e) {
-    const u = e.userData; return { id: u.id, name: u.name, kind: u.kind, catalogId: u.catalogId, params: u.params && { ...u.params }, mat: u.mat, srcId: u.srcId, pos: e.position.toArray().map(r3), rot: [r3(e.rotation.x), r3(e.rotation.y), r3(e.rotation.z)], scl: e.scale.toArray().map(r3), layer: u.layer, locked: u.locked, hidden: u.hidden, light: u.light, text: u.text, a: u.a, b: u.b, pts: u.pts, T: u.T, children: u.children };
+    const u = e.userData; return { id: u.id, name: u.name, kind: u.kind, catalogId: u.catalogId, params: u.params && { ...u.params }, mat: u.mat, srcId: u.srcId, imp: u.imp && { ...u.imp }, pos: e.position.toArray().map(r3), rot: [r3(e.rotation.x), r3(e.rotation.y), r3(e.rotation.z)], scl: e.scale.toArray().map(r3), layer: u.layer, locked: u.locked, hidden: u.hidden, light: u.light, text: u.text, a: u.a, b: u.b, pts: u.pts, T: u.T, children: u.children };
   }
   snapshot() { return this.list.map(e => this.describe(e)); }
 
-  _register(e) { this.ents.set(e.userData.id, e); this.world.add(e); return e; }
+  _register(e) { this.ents.set(e.userData.id, e); this.world.add(e); if (e.userData.kind !== 'light' && e.userData.kind !== 'note' && e.userData.kind !== 'dim') this.vp.decorate?.(e); return e; }
   _uid() { return 'e' + (this.nid++); }
 
   // ------------------------------------------------------------ history
@@ -94,7 +95,7 @@ export class StudioScene {
     return this._add({ kind: 'catalog', catalogId: id, params: p, name: o.name || it.name, pos: o.pos || [0, 0, 0], rot: o.rot || [0, 0, 0], scl: o.scl, mat: o.mat || null, layer: o.layer }, o);
   }
   addImport(object, name, o = {}) {
-    const srcId = 's' + (this.nid++); this.sources.set(srcId, object); return this._add({ kind: 'import', srcId, name: name || object.name || 'Imported model', pos: o.pos || [0, 0, 0], rot: o.rot || [0, 0, 0], scl: o.scl || [1, 1, 1] }, o);
+    const srcId = 's' + (this.nid++); this.sources.set(srcId, object); return this._add({ kind: 'import', srcId, imp: o.imp || object.userData.imp && { ...object.userData.imp }, name: name || object.name || 'Imported model', pos: o.pos || [0, 0, 0], rot: o.rot || [0, 0, 0], scl: o.scl || [1, 1, 1] }, o);
   }
   addWall(a, b, { H = 2.8, T = 0.25, mat = 'brick', y = 0, extend = true, params = {} } = {}) {
     const dx = b.x - a.x, dz = b.z - a.z, L = Math.hypot(dx, dz); if (L < 0.05) return null;
@@ -158,7 +159,7 @@ export class StudioScene {
     items.forEach((it, i) => { it.e.position[k] += a + (b - a) * i / (items.length - 1) - it.c; }); this.commit('Distribute'); this.vp.invalidate();
   }
   clear() { this.list.forEach(e => this.world.remove(e)); this.ents.clear(); this.sel = []; this.emit('selection'); }
-  newProject() { this.clear(); this.sources.clear(); this.layers = [{ id: 'L1', name: 'Layer 1', visible: true }]; this.name = 'Untitled project'; this.hist = []; this.hi = -1; this.commit('New'); }
+  newProject() { this.clear(); this.sources.clear(); this.layers = [{ id: 'L1', name: 'Layer 1', visible: true }]; this.views = []; this.name = 'Untitled project'; this.hist = []; this.hi = -1; this.commit('New'); }
 
   // ------------------------------------------------------------ layers
   addLayer(name) { const id = 'L' + (this.layers.length + 1 + Math.floor(Math.random() * 999)); this.layers.push({ id, name: name || 'Layer ' + (this.layers.length + 1), visible: true }); this.commit('Add layer'); return id; }
@@ -195,11 +196,11 @@ export class StudioScene {
   async toProject() {
     const used = new Set(this.list.filter(e => e.userData.kind === 'import').map(e => e.userData.srcId)); const flatten = d => d.kind === 'group' ? d.children.forEach(flatten) : d.srcId && used.add(d.srcId); this.list.forEach(e => e.userData.kind === 'group' && e.userData.children.forEach(flatten));
     const imports = {}; for (const id of used) { const src = this.sources.get(id); if (!src) continue; const buf = await new GLTFExporter().parseAsync(src, { binary: true }); imports[id] = { name: src.name, b64: b64(buf) }; }
-    return { app: 'ARCK', v: 1, name: this.name, nid: this.nid, layers: this.layers, entities: this.snapshot(), imports };
+    return { app: 'ARCK', v: 1, name: this.name, nid: this.nid, layers: this.layers, entities: this.snapshot(), imports, views: this.views || [] };
   }
   async fromProject(p) {
-    if (p.app !== 'ARCK') throw new Error('This is not an ARCK project file.'); this.clear(); this.sources.clear(); this.layers = p.layers || this.layers; this.name = p.name || 'Project'; this.nid = p.nid || 1;
-    for (const [id, v] of Object.entries(p.imports || {})) { const gltf = await new Promise((res, rej) => new GLTFLoader().parse(unb64(v.b64), '', res, rej)); gltf.scene.name = v.name; gltf.scene.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; } }); this.sources.set(id, gltf.scene); }
+    if (p.app !== 'ARCK') throw new Error('This is not an ARCK project file.'); this.clear(); this.sources.clear(); this.layers = p.layers || this.layers; this.views = p.views || []; this.name = p.name || 'Project'; this.nid = p.nid || 1;
+    for (const [id, v] of Object.entries(p.imports || {})) { const gltf = await new Promise((res, rej) => new GLTFLoader().parse(unb64(v.b64), '', res, rej)); const sr = gltf.scene.children.length === 1 ? gltf.scene.children[0] : gltf.scene; sr.name = v.name; sr.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; } }); this.sources.set(id, sr); }
     for (const d of p.entities) { try { this._register(this._make(d)); } catch (e) { console.warn('skipped', d.name, e.message); } }
     this.hist = []; this.hi = -1; this.commit('Open project'); this.vp.invalidate();
   }
